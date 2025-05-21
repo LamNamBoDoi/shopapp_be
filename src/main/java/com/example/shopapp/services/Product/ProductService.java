@@ -11,11 +11,14 @@ import com.example.shopapp.repositories.CategoryRepository;
 import com.example.shopapp.repositories.ProductImageRepository;
 import com.example.shopapp.repositories.ProductRepository;
 import com.example.shopapp.response.ProductResponse;
+import com.example.shopapp.utils.MessageKeys;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -42,20 +45,40 @@ public class ProductService implements IProductService{
     }
 
     @Override
+    public Product getDetailProducts(long productId) throws DataNotFoundException {
+        Optional<Product> optionalProduct = productRepository.getDetailProducts(productId);
+        if (optionalProduct.isPresent()) {
+            return optionalProduct.get();
+        }
+        throw new DataNotFoundException(MessageKeys.PRODUCT_NOT_FOUND);
+    }
+
+    @Override
     public Product getProductById(Long id) throws DataNotFoundException {
         return productRepository.findById(id)
                 .orElseThrow(() -> new DataNotFoundException("Cannot find product with id "+ id));
     }
 
     @Override
-    public Page<ProductResponse> getAllProducts(PageRequest pageRequest) {
+    public List<Product> findProductsByIds(List<Long> productIds){
+        return productRepository.findProductsByIds(productIds);
+    }
+
+    @Override
+    public Page<ProductResponse> getAllProducts(
+            String keyword,
+            Long categoryId,
+            PageRequest pageRequest) {
         // lấy danh sách sản phầm theo trang và giới hạn
-        return productRepository.findAll(pageRequest).map(
+        Page<Product> productsPage;
+        productsPage = productRepository.searchProducts(categoryId, keyword, pageRequest);
+        return productsPage.map(
                 ProductResponse::fromProduct
         );
     }
 
     @Override
+    @Transactional
     public Product updateProduct(Long id, ProductDTO productDTO) throws DataNotFoundException {
         Product existingProduct = getProductById(id);
         Category existingCategory = categoryRepository.findById(productDTO.getCategoryId())
@@ -73,6 +96,7 @@ public class ProductService implements IProductService{
     }
 
     @Override
+    @Transactional
     public void deleteProduct(Long id) {
         Optional<Product> optionalProduct = productRepository.findById(id);
         optionalProduct.ifPresent(productRepository::delete);

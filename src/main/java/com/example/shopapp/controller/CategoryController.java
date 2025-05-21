@@ -1,10 +1,15 @@
 package com.example.shopapp.controller;
 
+import com.example.shopapp.components.LocalizationUtils;
 import com.example.shopapp.dtos.CategoryDTO;
 import com.example.shopapp.models.Category;
 import com.example.shopapp.services.Category.ICategoryService;
+import com.example.shopapp.utils.MessageKeys;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
@@ -17,6 +22,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class CategoryController {
     private final ICategoryService categoryService;
+    private final LocalizationUtils localizationUtils;
 
     @PostMapping("")
     // nếu tham số truyền vào là 1 object thì sao => data tranfer object = request object
@@ -30,17 +36,18 @@ public class CategoryController {
             return ResponseEntity.badRequest().body(errorMessages);
         }
         categoryService.createCategory(categoryDTO);
-        return ResponseEntity.ok("Insert category successfully");
+        return ResponseEntity.ok(localizationUtils.getLocalizedMessage(MessageKeys.CATEGORY_CREATE_SUCCESSFULLY));
     }
 
     // Hiển thị tất cả category
     @GetMapping("")//http://localhost:8080/api/v1/categories?page=1&limit=10
-    public ResponseEntity<List<Category>> getAllCategories(
-            @RequestParam("page") int page,
-            @RequestParam("limit") int limit
+    public ResponseEntity<?> getAllCategories(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int limit
     ){
-        List<Category> categories = categoryService.getAllCategories();
-        return ResponseEntity.ok(categories);
+        Pageable pageable = PageRequest.of(page, limit);
+        Page<Category> categoryPage = categoryService.getAllCategories(pageable);
+        return ResponseEntity.ok(categoryPage);
     }
 
     @PutMapping("/{id}")
@@ -49,12 +56,12 @@ public class CategoryController {
             @Valid @RequestBody CategoryDTO categoryDTO
             ){
         categoryService.updateCategory(id, categoryDTO);
-        return ResponseEntity.ok("Update category successfully");
+        return ResponseEntity.ok(localizationUtils.getLocalizedMessage(MessageKeys.CATEGORY_UPDATE_SUCCESSFULLY));
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<String> deleteCategory(@PathVariable Long id){
         categoryService.deleteCategory(id);
-        return ResponseEntity.ok("Delete category with id: "+id+" successfully");
+        return ResponseEntity.ok(localizationUtils.getLocalizedMessage(MessageKeys.CATEGORY_DELETE_SUCCESSFULLY, id));
     }
 }

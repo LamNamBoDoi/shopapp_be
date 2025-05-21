@@ -10,10 +10,12 @@ import com.example.shopapp.response.ProductResponse;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 
+import java.util.List;
+
 public interface IProductService {
     Product createProduct(ProductDTO productDTO) throws DataNotFoundException;
     Product getProductById(Long id) throws DataNotFoundException;
-    Page<ProductResponse> getAllProducts(PageRequest pageRequest);
+    Page<ProductResponse> getAllProducts(  String keyword, Long categoryId,PageRequest pageRequest);
     Product updateProduct(Long id, ProductDTO productDTO) throws DataNotFoundException;
     void deleteProduct(Long id);
     boolean existsByName(String name);
@@ -21,4 +23,6 @@ public interface IProductService {
             Long productId,
             ProductImageDTO productImageDTO
     ) throws Exception;
+    Product getDetailProducts(long productId) throws Exception;
+    List<Product> findProductsByIds(List<Long> productIds);
 }

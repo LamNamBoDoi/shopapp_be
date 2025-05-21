@@ -117,3 +117,10 @@ CREATE TABLE order_details(
     color VARCHAR(20) DEFAULT ''
 );
 
+UPDATE products
+SET thumbnail = (
+    SELECT image_url
+    FROM product_images
+    WHERE products.id = product_images.product_id
+    LIMIT 1
+)

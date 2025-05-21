@@ -1,10 +1,12 @@
 package com.example.shopapp.controller;
 
+import com.example.shopapp.components.LocalizationUtils;
 import com.example.shopapp.dtos.OrderDTO;
 import com.example.shopapp.models.Order;
 import com.example.shopapp.response.OrderResponse;
 import com.example.shopapp.services.Order.IOrderService;
 import com.example.shopapp.services.Order.OrderService;
+import com.example.shopapp.utils.MessageKeys;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.aspectj.weaver.ast.Or;
@@ -20,6 +22,8 @@ import java.util.List;
 @RequiredArgsConstructor
 public class OrderController {
     private final IOrderService orderService;
+    private final LocalizationUtils localizationUtils;
+
     @PostMapping("")
     public ResponseEntity<?> createOrder(
             @RequestBody @Valid OrderDTO orderDTO,
@@ -81,7 +85,7 @@ public class OrderController {
         try{
             // xóa mềm => cập nhật trường active = false
             orderService.deleteOrder(id);
-            return ResponseEntity.ok("Xóa thông tin 1 order");
+            return ResponseEntity.ok(localizationUtils.getLocalizedMessage(MessageKeys.ORDER_DELETE_SUCCESSFULLY, id));
         } catch (Exception e){
             return ResponseEntity.badRequest().body(e.getMessage());
         }

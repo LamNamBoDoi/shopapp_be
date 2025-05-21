@@ -8,6 +8,7 @@ import com.example.shopapp.models.User;
 import com.example.shopapp.repositories.OrderRepository;
 import com.example.shopapp.repositories.UserRepository;
 import com.example.shopapp.response.OrderResponse;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
@@ -61,6 +62,7 @@ public class OrderService implements IOrderService{
     }
 
     @Override
+    @Transactional
     public Order updateOrder(Long id, OrderDTO orderDTO) {
         try {
             Order existingOrder = orderRepository.findById(id).orElseThrow(
@@ -78,6 +80,7 @@ public class OrderService implements IOrderService{
     }
 
     @Override
+    @Transactional
     public void deleteOrder(Long id) {
         orderRepository.findById(id).ifPresent(order -> {
             order.setActive(false); // chỉ thay đổi flag
