@@ -7,6 +7,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
+
 @Data
 @AllArgsConstructor
 @Builder
@@ -40,5 +42,18 @@ public class OrderDetailResponse {
                 .totalMoney(orderDetail.getTotalMoney())
                 .numberOfProducts(orderDetail.getNumberOfProducts())
                 .build();
+    }
+    public static List<OrderDetailResponse> fromOrderDetailList(List<OrderDetail> orderDetailList) {
+        return orderDetailList.stream()
+                .map(orderDetail -> OrderDetailResponse.builder()
+                        .id(orderDetail.getId())
+                        .orderId(orderDetail.getOrder().getId())
+                        .productId(orderDetail.getProduct().getId())
+                        .price(orderDetail.getPrice())
+                        .numberOfProducts(orderDetail.getNumberOfProducts())
+                        .totalMoney(orderDetail.getTotalMoney())
+                        .color(orderDetail.getColor())
+                        .build()
+                ).toList();
     }
 }

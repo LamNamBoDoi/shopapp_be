@@ -1,29 +1,35 @@
 package com.example.shopapp.services.Order;
 
+import com.example.shopapp.components.TranslateMessages;
+import com.example.shopapp.dtos.CartItemDTO;
 import com.example.shopapp.dtos.OrderDTO;
 import com.example.shopapp.exceptions.DataNotFoundException;
-import com.example.shopapp.models.Order;
-import com.example.shopapp.models.OrderStatus;
-import com.example.shopapp.models.User;
+import com.example.shopapp.models.*;
+import com.example.shopapp.repositories.OrderDetailRepository;
 import com.example.shopapp.repositories.OrderRepository;
+import com.example.shopapp.repositories.ProductRepository;
 import com.example.shopapp.repositories.UserRepository;
 import com.example.shopapp.response.OrderResponse;
+import com.example.shopapp.utils.MessageKeys;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
-public class OrderService implements IOrderService{
+public class OrderService extends TranslateMessages implements IOrderService{
     private final UserRepository userRepository;
     private final OrderRepository orderRepository;
     private final ModelMapper modelMapper;
+    private final ProductRepository productRepository;
+    private final OrderDetailRepository orderDetailRepository;
 
     @Override
     public OrderResponse createOrder(OrderDTO orderDTO) throws DataNotFoundException {
@@ -52,7 +58,33 @@ public class OrderService implements IOrderService{
         }
         order.setShippingDate(shippingDate);
         order.setActive(true);
+        order.setTotalMoney(orderDTO.getTotalMoney());
         orderRepository.save(order);
+
+        // tạo danh sách các đối tượng orderDetails
+        List<OrderDetail> orderDetails = new ArrayList<>();
+        for(CartItemDTO cartItemDTO : orderDTO.getCartItems()){
+            OrderDetail orderDetail = new OrderDetail();
+            orderDetail.setOrder(order);
+
+            // lấy thông in sản phẩm từ cartItemDto
+            Long productId = cartItemDTO.getProductId();
+            int quantity = cartItemDTO.getQuantity();
+
+            // tìm thông tin sản phẩm từ cơ sở dữ liệu
+            Product product = productRepository.findById(productId)
+                    .orElseThrow(()->new DataNotFoundException(
+                            translate(MessageKeys.PRODUCT_NOT_FOUND, productId)
+                    ));
+            // Đặt thông tin cho orderDetails
+            orderDetail.setProduct(product);
+            orderDetail.setNumberOfProducts(quantity);
+            orderDetail.setPrice(product.getPrice());
+
+            // thêm orderDetails vào danh sách
+            orderDetails.add(orderDetail);
+        }
+        orderDetailRepository.saveAll(orderDetails);
         return modelMapper.map(order, OrderResponse.class);
     }
 

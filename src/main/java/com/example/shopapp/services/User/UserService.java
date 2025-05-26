@@ -1,6 +1,7 @@
 package com.example.shopapp.services.User;
 
 import com.example.shopapp.components.JwtTokenUtils;
+import com.example.shopapp.components.TranslateMessages;
 import com.example.shopapp.dtos.UserDTO;
 import com.example.shopapp.exceptions.DataNotFoundException;
 import com.example.shopapp.exceptions.PermissionDenyException;
@@ -8,6 +9,7 @@ import com.example.shopapp.models.Role;
 import com.example.shopapp.models.User;
 import com.example.shopapp.repositories.RoleRepository;
 import com.example.shopapp.repositories.UserRepository;
+import com.example.shopapp.utils.MessageKeys;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -20,14 +22,14 @@ import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
-public class UserService implements IUserService{
+public class UserService extends TranslateMessages implements IUserService{
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenUtils jwtTokenUtils;
     private final AuthenticationManager authenticationManager;
     @Override
-    public User createUser(UserDTO userDTO) throws Exception {
+    public User createUser(UserDTO userDTO)  throws Exception {
         String phoneNumber = userDTO.getPhoneNumber();
         // Kiểm tra xem số điện thoại đã tồn tại chưa
         if(userRepository.existsByPhoneNumber(phoneNumber)){
@@ -82,4 +84,22 @@ public class UserService implements IUserService{
         return jwtTokenUtils.generateToken(existingUser);
 //      return optionalUser.get();//muon tra ve JWT token
     }
+
+    @Override
+    public User getUserDetailsFromToken(String token) throws Exception {
+        if(jwtTokenUtils.isTokenExpired(token)){
+            throw new Exception(translate(MessageKeys.TOKEN_EXPIRATION_TIME));
+        }
+
+        String phoneNumber = jwtTokenUtils.extractPhonenumber(token);
+        Optional<User> optionalUser = userRepository.findByPhoneNumber(phoneNumber);
+
+        if(optionalUser.isPresent()){
+            return optionalUser.get();
+        }else{
+            throw new DataNotFoundException(translate(MessageKeys.USER_NOT_FOUND));
+        }
+    }
+
+
 }

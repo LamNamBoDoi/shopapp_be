@@ -68,6 +68,6 @@ public class OrderDetailController {
             @Valid @PathVariable Long id
     ){
         orderDetailService.deleteOrderDetail(id);
-        return ResponseEntity.ok().body(localizationUtils.getLocalizedMessage(MessageKeys.ORDER_DETAIL_DELETE_SUCCESSFULLY));
+        return ResponseEntity.ok().body(localizationUtils.getLocalizedMessage(MessageKeys.CREATE_ORDER_DETAILS_SUCCESS));
     }
 }

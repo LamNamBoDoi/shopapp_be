@@ -1,11 +1,13 @@
 package com.example.shopapp.models;
 
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Date;
+import java.util.List;
 
 @Entity
 @Setter
@@ -45,7 +47,7 @@ public class Order {
     private String status;
 
     @Column(name = "total_money")
-    private String totalMoney;
+    private Float totalMoney;
 
     @Column(name = "shipping_method")
     private String shippingMethod;
@@ -62,6 +64,10 @@ public class Order {
     @Column(name = "shipping_date")
     private LocalDate shippingDate;// khi người dùng thanh toàn mới cập nhật
 
-    @Column(name = " active")
+    @Column(name = "active")
     private boolean active;// thuộc về admin
+
+    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonManagedReference
+    private List<OrderDetail> orderDetails;
 }

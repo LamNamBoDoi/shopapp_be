@@ -36,7 +36,7 @@ public class CategoryController {
             return ResponseEntity.badRequest().body(errorMessages);
         }
         categoryService.createCategory(categoryDTO);
-        return ResponseEntity.ok(localizationUtils.getLocalizedMessage(MessageKeys.CATEGORY_CREATE_SUCCESSFULLY));
+        return ResponseEntity.ok(localizationUtils.getLocalizedMessage(MessageKeys.CREATE_CATEGORIES_SUCCESS));
     }
 
     // Hiển thị tất cả category
@@ -56,12 +56,12 @@ public class CategoryController {
             @Valid @RequestBody CategoryDTO categoryDTO
             ){
         categoryService.updateCategory(id, categoryDTO);
-        return ResponseEntity.ok(localizationUtils.getLocalizedMessage(MessageKeys.CATEGORY_UPDATE_SUCCESSFULLY));
+        return ResponseEntity.ok(localizationUtils.getLocalizedMessage(MessageKeys.UPDATE_CATEGORIES_SUCCESS));
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<String> deleteCategory(@PathVariable Long id){
         categoryService.deleteCategory(id);
-        return ResponseEntity.ok(localizationUtils.getLocalizedMessage(MessageKeys.CATEGORY_DELETE_SUCCESSFULLY, id));
+        return ResponseEntity.ok(localizationUtils.getLocalizedMessage(MessageKeys.DELETE_CATEGORIES_SUCCESS, id));
     }
 }

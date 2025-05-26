@@ -60,8 +60,9 @@ public class ProductService implements IProductService{
     }
 
     @Override
-    public List<Product> findProductsByIds(List<Long> productIds){
-        return productRepository.findProductsByIds(productIds);
+    public List<ProductResponse> findProductsByIds(List<Long> productIds){
+        List<Product> listProduct = productRepository.findProductsByIds(productIds);
+        return listProduct.stream().map(ProductResponse::fromProduct).toList();
     }
 
     @Override

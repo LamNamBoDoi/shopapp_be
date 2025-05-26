@@ -82,7 +82,7 @@ public class ProductController {
         Product existingProduct = productService.getProductById(productId);
         files = files == null ? new ArrayList<MultipartFile>() : files;
         if(files.size()>ProductImage.MAXIMUM_IMAGES_PER_PRODUCT){
-             return ResponseEntity.badRequest().body(localizationUtils.getLocalizedMessage(MessageKeys.PRODUCT_UPLOAD_IMAGE_ERROR_OVER));
+             return ResponseEntity.badRequest().body(localizationUtils.getLocalizedMessage(MessageKeys.FILES_REQUIRED));
         }
         List<ProductImage> productImages = new ArrayList<>();
         for(MultipartFile file : files){
@@ -92,14 +92,14 @@ public class ProductController {
             //Kiểm tra kích thước file và định dạng
             if (file.getSize() > 10 * 1024 * 1024) {
                 return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE)
-                        .body(localizationUtils.getLocalizedMessage(MessageKeys.PRODUCT_UPLOAD_IMAGE_FILED_LARGE));
+                        .body(localizationUtils.getLocalizedMessage(MessageKeys.FILES_IMAGES_SIZE_FAILED));
             }
 
             //Kiểm tra định dạng file
             String contentType = file.getContentType();
             if (contentType == null || !contentType.startsWith("image/")) {
                 return ResponseEntity.status(HttpStatus.UNSUPPORTED_MEDIA_TYPE)
-                        .body(localizationUtils.getLocalizedMessage(MessageKeys.PRODUCT_UPLOAD_IMAGE_FILED_MUST_BE_IMAGE));
+                        .body(localizationUtils.getLocalizedMessage(MessageKeys.FILES_IMAGES_TYPE_FAILED));
             }
             // Lưu file và cập nhật thumbnail trong DTO
             String filename = storeFile(file);
@@ -198,8 +198,10 @@ public class ProductController {
             List<Long> productIds = Arrays.stream(ids.split(","))
                     .map(Long::parseLong)
                     .collect(Collectors.toList());
-            List<Product> products = productService.findProductsByIds(productIds);
-            return ResponseEntity.ok(products);
+            List<ProductResponse> productResponsess = productService.findProductsByIds(productIds);
+            return ResponseEntity.ok(
+                    productResponsess
+            );
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
