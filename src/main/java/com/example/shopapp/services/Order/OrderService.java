@@ -14,6 +14,8 @@ import com.example.shopapp.utils.MessageKeys;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -27,6 +29,15 @@ import java.util.Optional;
 public class OrderService extends TranslateMessages implements IOrderService{
     private final UserRepository userRepository;
     private final OrderRepository orderRepository;
+
+    @Override
+    public Page<OrderResponse> findByKeyword(String keyword, Pageable pageable) {
+        // lấy danh sách sản phẩm theo trang(page) và giới hạn(limit)
+        Page<Order> orderPage;
+        orderPage = orderRepository.findByKeyword(keyword, pageable);
+        return orderPage.map(OrderResponse::fromOrder);
+    }
+
     private final ModelMapper modelMapper;
     private final ProductRepository productRepository;
     private final OrderDetailRepository orderDetailRepository;
@@ -124,6 +135,8 @@ public class OrderService extends TranslateMessages implements IOrderService{
     public List<Order> findByUserId(Long userId) {
         return orderRepository.findByUserId(userId);
     }
+
+
 }
 
 

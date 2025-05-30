@@ -2,22 +2,32 @@ package com.example.shopapp.services.User;
 
 import com.example.shopapp.components.JwtTokenUtils;
 import com.example.shopapp.components.TranslateMessages;
+import com.example.shopapp.dtos.RefreshTokenDTO;
+import com.example.shopapp.dtos.UpdateUserDTO;
 import com.example.shopapp.dtos.UserDTO;
 import com.example.shopapp.exceptions.DataNotFoundException;
 import com.example.shopapp.exceptions.PermissionDenyException;
 import com.example.shopapp.models.Role;
+import com.example.shopapp.models.Token;
 import com.example.shopapp.models.User;
 import com.example.shopapp.repositories.RoleRepository;
+import com.example.shopapp.repositories.TokenRepository;
 import com.example.shopapp.repositories.UserRepository;
+import com.example.shopapp.response.LoginResponse;
+import com.example.shopapp.services.Token.TokenService;
 import com.example.shopapp.utils.MessageKeys;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -26,7 +36,9 @@ public class UserService extends TranslateMessages implements IUserService{
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
+    private final TokenRepository tokenRepository;
     private final JwtTokenUtils jwtTokenUtils;
+    private final TokenService refreshTokenService;
     private final AuthenticationManager authenticationManager;
     @Override
     public User createUser(UserDTO userDTO)  throws Exception {
@@ -99,6 +111,89 @@ public class UserService extends TranslateMessages implements IUserService{
         }else{
             throw new DataNotFoundException(translate(MessageKeys.USER_NOT_FOUND));
         }
+    }
+
+    @Override
+    public User updateUser(Long userId, UpdateUserDTO updateUserDTO) throws Exception {
+        User existingUser = userRepository.findById(userId)
+                .orElseThrow(()->new DataNotFoundException(translate(MessageKeys.USER_NOT_FOUND)));
+
+        String phoneNumber = updateUserDTO.getPhoneNumber();
+        if(!existingUser.getPhoneNumber().equals(phoneNumber)
+        && userRepository.existsByPhoneNumber(phoneNumber)){
+            throw new DataIntegrityViolationException(translate(MessageKeys.PASSWORD_NOT_MATCH));
+        }
+
+        if (updateUserDTO.getFullName() != null) {
+            existingUser.setFullName(updateUserDTO.getFullName());
+        }
+        if (updateUserDTO.getPhoneNumber() != null) {
+            existingUser.setPhoneNumber(updateUserDTO.getPhoneNumber());
+        }
+        if (updateUserDTO.getAddress() != null) {
+            existingUser.setAddress(updateUserDTO.getAddress());
+        }
+        if (updateUserDTO.getDateOfBirth() != null) {
+            existingUser.setDateOfBirth(updateUserDTO.getDateOfBirth());
+        }
+        if (updateUserDTO.getFacebookAccountId() > 0) {
+            existingUser.setFacebookAccountId(updateUserDTO.getFacebookAccountId());
+        }
+        if (updateUserDTO.getGoogleAccountId() > 0) {
+            existingUser.setGoogleAccountId(updateUserDTO.getGoogleAccountId());
+        }
+        // cập nhật mật khẩu
+        if (updateUserDTO.getPassword() != null && !updateUserDTO.getPassword().isEmpty()) {
+            String newPassword = passwordEncoder.encode(updateUserDTO.getPassword());
+            existingUser.setPassword(newPassword);
+        }
+        return userRepository.save(existingUser);
+    }
+
+    // dùng refresh_token để tạo lại token mới
+    @Override
+    public LoginResponse refreshToken(RefreshTokenDTO refreshTokenDTO) throws DataNotFoundException, PermissionDenyException {
+        Token token = refreshTokenService.verifyRefreshToken(refreshTokenDTO.getRefreshToken());
+
+        // kiểm tra refreshToken còn hạn không
+        if(token.getExpirationTime().isBefore(Instant.now())){
+            throw new PermissionDenyException(translate(MessageKeys.APP_PERMISSION_DENY_EXCEPTION));
+        }
+
+        // tạo token mới bằng refreshToken
+        return LoginResponse.builder()
+                .token(jwtTokenUtils.generateToken(token.getUser()))
+                .refreshToken(token.getRefreshToken())
+                .build();
+    }
+
+    @Override
+    public Page<User> findAllUsers(String keyword, Pageable pageable) {
+        return userRepository.findAll(keyword, pageable);
+    }
+
+    @Override
+    public void resetPassword(Long userId, String newPassword) throws Exception {
+        User user = userRepository.findById(userId).orElseThrow(
+                () -> new DataNotFoundException(translate(MessageKeys.USER_NOT_FOUND))
+        );
+
+        String encodedPassword = passwordEncoder.encode(newPassword);
+        user.setPassword(encodedPassword);
+        userRepository.save(user);
+
+        //reset token
+        List<Token> tokens = tokenRepository.findByUser(user);
+        tokenRepository.deleteAll(tokens);
+    }
+
+    @Override
+    public void blockOrEnable(Long userId, Boolean active) throws DataNotFoundException {
+        User user = userRepository.findById(userId).orElseThrow(
+                () -> new DataNotFoundException(translate(MessageKeys.USER_NOT_FOUND))
+        );
+        user.setActive(active);
+        userRepository.save(user);
     }
 
 

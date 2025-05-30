@@ -1,20 +1,29 @@
 package com.example.shopapp.controller;
 
 import com.example.shopapp.components.TranslateMessages;
+import com.example.shopapp.dtos.RefreshTokenDTO;
+import com.example.shopapp.dtos.UpdateUserDTO;
 import com.example.shopapp.dtos.UserDTO;
 import com.example.shopapp.dtos.UserLoginDTO;
 import com.example.shopapp.exceptions.DataNotFoundException;
+import com.example.shopapp.models.Token;
 import com.example.shopapp.models.User;
 import com.example.shopapp.response.ApiResponse;
 import com.example.shopapp.response.LoginResponse;
 import com.example.shopapp.response.RegisterResponse;
 import com.example.shopapp.response.UserResponse;
+import com.example.shopapp.services.Token.TokenService;
 import com.example.shopapp.services.User.IUserService;
 import com.example.shopapp.components.LocalizationUtils;
 import com.example.shopapp.utils.MessageKeys;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.support.DefaultMessageSourceResolvable;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.annotation.*;
@@ -27,8 +36,9 @@ import java.util.List;
 public class UserController extends TranslateMessages {
     private final IUserService userService;
     private final LocalizationUtils localizationUtils;
+    private final TokenService tokenService;
     @PostMapping("/register")
-    // can we register an "admin" user?
+    @Transactional
     public ResponseEntity<RegisterResponse> createUser(
             @Valid @RequestBody UserDTO userDTO,
             BindingResult result
@@ -65,34 +75,113 @@ public class UserController extends TranslateMessages {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<LoginResponse> login(
-            @Valid @RequestBody UserLoginDTO userLoginDTO
+    public ResponseEntity<ApiResponse<LoginResponse>> login(
+            @Valid @RequestBody UserLoginDTO userLoginDTO,
+            HttpServletRequest request,
+            BindingResult bindingResult
             ){
         try {
-            String token = userService.login(userLoginDTO.getPhoneNumber(), userLoginDTO.getPassword());
-            return ResponseEntity.ok(LoginResponse.builder()
-                            .message(localizationUtils.getLocalizedMessage(MessageKeys.LOGIN_SUCCESS))
-                            .token(token)
-                    .build());
-        } catch (DataNotFoundException e) {
-            return ResponseEntity.badRequest().body(LoginResponse.builder()
-                    .message(localizationUtils.getLocalizedMessage(MessageKeys.LOGIN_FAILED, e.getMessage()))
-                    .build());
+            if(bindingResult.hasErrors()){
+                List<String> errorMessages = bindingResult.getFieldErrors().stream()
+                        .map(DefaultMessageSourceResolvable::getDefaultMessage).toList();
+                return ResponseEntity.badRequest().body(
+                        ApiResponse.<LoginResponse>builder()
+                                .message(translate(MessageKeys.LOGIN_FAILED))
+                                .errors(errorMessages.stream()
+                                        .map(this::translate)
+                                        .toList()).build()
+                );
+            }
+           String tokenGenerator = userService.login(
+                   userLoginDTO.getPhoneNumber(),
+                   userLoginDTO.getPassword()
+           );
+
+            // kiểm tra là điện thoại hay web đăng nhập
+            String userAgent = request.getHeader("User-Agent");
+            User user = userService.getUserDetailsFromToken(tokenGenerator);
+            Token token = tokenService.addTokenEndRefreshToken(user, tokenGenerator, isMoblieDevice(userAgent));
+
+            ApiResponse<LoginResponse> apiResponse = ApiResponse.<LoginResponse>builder()
+                    .success(true)
+                    .message(translate((MessageKeys.LOGIN_SUCCESS)))
+                    .payload(LoginResponse.builder()
+                            .token(token.getToken())
+                            .refreshToken(token.getRefreshToken())
+                            .build())
+                    .build();
+            return ResponseEntity.ok().body(apiResponse);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(
+                    ApiResponse.<LoginResponse>builder()
+                            .message(translate(MessageKeys.LOGIN_FAILED))
+                            .error(e.getMessage()).build()
+            );
         }
     }
 
     // Lấy ra thông tin chi tiết của người dùng thông qua token truyền vào
     @PostMapping("/details")
     public ResponseEntity<ApiResponse<?>> getUserDetails(
-            @RequestHeader("Authorization") String token
+            @RequestHeader("Authorization") String authorizationHeader
     ) {
         try {
-            String extractedToken = token.substring(7);
+            String extractedToken = authorizationHeader.substring(7);
             User user = userService.getUserDetailsFromToken(extractedToken);
             return ResponseEntity.ok(ApiResponse.<UserResponse>builder().success(true)
                     .payload(UserResponse.fromUser(user)).build()
             );
         } catch (Exception e) {
+            return ResponseEntity.badRequest().body(
+                    ApiResponse.<UserResponse>builder()
+                            .message(translate(MessageKeys.MESSAGE_ERROR_GET)).error(e.getMessage()).build()
+            );
+        }
+    }
+
+    @PostMapping("/refresh-token")
+    public ResponseEntity<ApiResponse<LoginResponse>> refreshToken(@RequestBody RefreshTokenDTO refreshTokenDTO){
+        try{
+            ApiResponse<LoginResponse> apiResponse = ApiResponse.<LoginResponse>builder()
+                    .success(true)
+                    .message(translate(MessageKeys.REFRESH_TOKEN_SUCCESS))
+                    .payload(userService.refreshToken(refreshTokenDTO))
+                    .build();
+            return ResponseEntity.ok().body(apiResponse);
+        }catch (Exception e){
+            ApiResponse<LoginResponse> apiResponse = ApiResponse.<LoginResponse>builder()
+                    .message(translate(MessageKeys.ERROR_REFRESH_TOKEN))
+                    .error(e.getMessage()).build();
+            return ResponseEntity.badRequest().body(apiResponse);
+        }
+    }
+
+    //kiểm tra xem thiết bị đang đăng nhập có phải mobile không
+    private boolean isMoblieDevice(String userAgent) {
+        return userAgent.toLowerCase().contains("mobile");
+    }
+
+    @PutMapping("/details/{userID}")
+    @Transactional
+    @PreAuthorize("hasRole('ROLE_USER')")
+    public ResponseEntity<ApiResponse<?>> updateUserDetails(
+            @PathVariable Long userId,
+            @RequestBody @Valid UpdateUserDTO updateUserDTO,
+            @RequestHeader("Authorization") String token
+            ){
+        try{
+            String extractedToken = token.substring(7);
+            User user = userService.getUserDetailsFromToken(extractedToken);
+            if(!user.getId().equals(userId)){
+                return  ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+            }
+            User updateUser = userService.updateUser(userId, updateUserDTO);
+            return ResponseEntity.ok(ApiResponse.<UserResponse>builder()
+                    .success(true)
+                    .message(translate(MessageKeys.MESSAGE_UPDATE_GET))
+                    .payload(UserResponse.fromUser(updateUser)).build()
+            );
+        }catch (Exception e){
             return ResponseEntity.badRequest().body(
                     ApiResponse.<UserResponse>builder()
                             .message(translate(MessageKeys.MESSAGE_ERROR_GET)).error(e.getMessage()).build()

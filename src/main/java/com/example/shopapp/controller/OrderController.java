@@ -3,12 +3,17 @@ package com.example.shopapp.controller;
 import com.example.shopapp.components.LocalizationUtils;
 import com.example.shopapp.dtos.OrderDTO;
 import com.example.shopapp.models.Order;
+import com.example.shopapp.response.OrderPageResponse;
 import com.example.shopapp.response.OrderResponse;
 import com.example.shopapp.services.Order.IOrderService;
 import com.example.shopapp.utils.MessageKeys;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.annotation.*;
@@ -87,5 +92,31 @@ public class OrderController {
         } catch (Exception e){
             return ResponseEntity.badRequest().body(e.getMessage());
         }
+    }
+
+    // lấy ra tất cả các đơn hàng với quyền admin
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
+    @GetMapping("/get-order-by-keyword")
+    public ResponseEntity<OrderPageResponse> getOrderByKeyword(
+            @RequestParam(defaultValue = "", required = false) String keyword,
+            @RequestParam(defaultValue = "0", name = "page") int page,
+            @RequestParam(defaultValue = "10", name = "limit") int limit
+    ) {
+        // tạo Pageable từ thông tin trang và giới hạn
+        PageRequest pageRequest = PageRequest.of(
+                page,
+                limit,
+                Sort.by("id").ascending()
+        );
+        Page<OrderResponse> orderPage = orderService.findByKeyword(keyword, pageRequest);
+        List<OrderResponse> orders = orderPage.getContent();
+        return ResponseEntity.ok(OrderPageResponse.builder()
+                .orders(orders)
+                .pageNumber(page)
+                .totalElements(orderPage.getTotalElements())
+                .pageSize(orderPage.getSize())
+                .isLast(orderPage.isLast())
+                .totalPages(orderPage.getTotalPages())
+                .build());
     }
 }

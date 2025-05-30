@@ -11,9 +11,9 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @Builder
 public class LoginResponse {
-    @JsonProperty("message")
-    private String message;
-
     @JsonProperty("token")
     private String token;
+
+    @JsonProperty("refresh_token")
+    private String refreshToken;
 }

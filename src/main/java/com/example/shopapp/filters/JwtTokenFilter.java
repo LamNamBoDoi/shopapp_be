@@ -89,6 +89,21 @@ public class JwtTokenFilter extends OncePerRequestFilter {
                 Pair.of(String.format("%s/users/login", apiPrefix), "POST")
         );
 
+        String requestPath = request.getServletPath();
+        String requestMethod = request.getMethod();
+
+        if (requestPath.startsWith("/swagger-ui") ||
+                requestPath.startsWith("/v3/api-docs") ||
+                requestPath.startsWith("/swagger-resources") ||
+                requestPath.startsWith("/webjars") ||
+                requestPath.equals("/swagger-ui.html") ||
+                requestPath.equals("/error")) {
+            return true;
+        }
+
+        if(requestPath.equals(String.format("%s/orders", apiPrefix)) && requestMethod.equals("GET"))
+            return true;
+
         for(Pair<String, String> bypassToken: bypassTokens){
             if(request.getServletPath().contains(bypassToken.getFirst())
                     && request.getMethod().equals(bypassToken.getSecond())
