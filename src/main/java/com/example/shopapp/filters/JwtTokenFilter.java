@@ -17,6 +17,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
+import org.springframework.util.AntPathMatcher;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
@@ -36,13 +37,12 @@ public class JwtTokenFilter extends OncePerRequestFilter {
     protected void doFilterInternal(@NonNull HttpServletRequest request,
                                     @NonNull HttpServletResponse response,
                                     @NonNull FilterChain filterChain)
-            throws ServletException, IOException {
-        //filterChain.doFilter(request, response);// enable bypass
-        try{
+            throws IOException, ServletException {
             if(isBypassToken(request)){
                 filterChain.doFilter(request, response);
                 return;
             }
+        try{
             final String authHeader = request.getHeader("Authorization");
             if(authHeader == null || !authHeader.startsWith("Bearer ")){
                 response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Unauthorized");
@@ -79,19 +79,24 @@ public class JwtTokenFilter extends OncePerRequestFilter {
 
     }
 
-    private boolean isBypassToken(@NonNull HttpServletRequest request){
+    private boolean isBypassToken(@NonNull HttpServletRequest request) {
         final List<Pair<String, String>> bypassTokens = Arrays.asList(
                 Pair.of(String.format("%s/products", apiPrefix), "GET"),
                 Pair.of(String.format("%s/products/**", apiPrefix), "GET"),
+                Pair.of(String.format("%s/products/by-ids**", apiPrefix), "GET"),
                 Pair.of(String.format("%s/orders/**", apiPrefix), "GET"),
-                Pair.of(String.format("%s/categories", apiPrefix), "GET"),
+                Pair.of(String.format("%s/comments**", apiPrefix), "GET"),
+                Pair.of(String.format("%s/categories**", apiPrefix), "GET"),
+                Pair.of(String.format("%s/wishlist/**", apiPrefix), "GET"),
                 Pair.of(String.format("%s/users/register", apiPrefix), "POST"),
                 Pair.of(String.format("%s/users/login", apiPrefix), "POST")
         );
 
         String requestPath = request.getServletPath();
         String requestMethod = request.getMethod();
+        AntPathMatcher matcher = new AntPathMatcher();
 
+        // Bỏ qua các tài nguyên swagger, docs, lỗi
         if (requestPath.startsWith("/swagger-ui") ||
                 requestPath.startsWith("/v3/api-docs") ||
                 requestPath.startsWith("/swagger-resources") ||
@@ -101,13 +106,13 @@ public class JwtTokenFilter extends OncePerRequestFilter {
             return true;
         }
 
-        if(requestPath.equals(String.format("%s/orders", apiPrefix)) && requestMethod.equals("GET"))
-            return true;
+        for (Pair<String, String> bypassToken : bypassTokens) {
+            String pathPattern = bypassToken.getFirst();
+            String method = bypassToken.getSecond();
 
-        for(Pair<String, String> bypassToken: bypassTokens){
-            if(request.getServletPath().contains(bypassToken.getFirst())
-                    && request.getMethod().equals(bypassToken.getSecond())
-            ){
+            if (matcher.match(pathPattern, requestPath) &&
+                    requestMethod.equalsIgnoreCase(method)) {
+                System.out.println("true");
                 return true;
             }
         }

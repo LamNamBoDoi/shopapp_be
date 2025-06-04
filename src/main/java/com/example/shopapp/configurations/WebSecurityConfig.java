@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;
@@ -33,90 +34,108 @@ public class WebSecurityConfig {
 
     @Value("${api.prefix}")
     private String apiPrefix;
+
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception{
-       http.csrf(AbstractHttpConfigurer::disable)
-               .addFilterBefore(jwtTokenFilter, UsernamePasswordAuthenticationFilter.class)
-               .exceptionHandling(ex ->
-                       ex.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)) // Trả về 401 thay vì redirect
-               )
-               .authorizeHttpRequests(requests ->{
-                   requests.requestMatchers(
-                                   "/swagger-ui/**",
-                                   "/v3/api-docs/**",
-                                   "/swagger-resources/**",
-                                   "/webjars/**",
-                                   "/swagger-ui.html",
-                           String.format("%s/users/register", apiPrefix),
-                           String.format("%s/users/login", apiPrefix),
-                           String.format("%s/users/details", apiPrefix))
-                           .permitAll()
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        http.csrf(AbstractHttpConfigurer::disable)
+                .addFilterBefore(jwtTokenFilter, UsernamePasswordAuthenticationFilter.class)
+                .exceptionHandling(ex ->
+                        ex.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)) // Trả về 401 thay vì redirect
+                )
+                .authorizeHttpRequests(requests -> {
+                    requests.requestMatchers(HttpMethod.GET,
+                                    "/swagger-ui/**",
+                                    "/v3/api-docs/**",
+                                    "/swagger-resources/**",
+                                    "/webjars/**",
+                                    "/swagger-ui.html",
+                                    String.format("%s/comments", apiPrefix),
+                                    String.format("%s/comments/**", apiPrefix))
+                            .permitAll()
+                            .requestMatchers(HttpMethod.POST,
+                                    String.format("%s/users/register", apiPrefix),
+                                    String.format("%s/users/login", apiPrefix),
+                                    String.format("%s/users/refresh-token", apiPrefix)
+                            ).permitAll()
+                            .requestMatchers(GET,
+                                    String.format("%s/categories", apiPrefix)).permitAll()
+                            .requestMatchers(POST,
+                                    String.format("%s/categories/**", apiPrefix)).hasRole(Role.ADMIN)
+                            .requestMatchers(PUT,
+                                    String.format("%s/categories/**", apiPrefix)).hasRole(Role.ADMIN)
+                            .requestMatchers(DELETE,
+                                    String.format("%s/categories/**", apiPrefix)).hasRole(Role.ADMIN)
 
-                           .requestMatchers(GET,
-                                   String.format("%s/categories", apiPrefix)).permitAll()
-                           .requestMatchers(POST,
-                                   String.format("%s/categories/**", apiPrefix)).hasRole(Role.ADMIN)
-                           .requestMatchers(PUT,
-                                   String.format("%s/categories/**", apiPrefix)).hasRole(Role.ADMIN)
-                           .requestMatchers(DELETE,
-                                   String.format("%s/categories/**", apiPrefix)).hasRole(Role.ADMIN)
+                            .requestMatchers(GET,
+                                    String.format("%s/products/images/**", apiPrefix)).permitAll()
+                            .requestMatchers(GET,
+                                    String.format("%s/products", apiPrefix),
+                                    String.format("%s/products/**", apiPrefix)).permitAll()
+                            .requestMatchers(GET,
+                                    String.format("%s/products/details", apiPrefix)).permitAll()
+                            .requestMatchers(GET,
+                                    String.format("%s/products/by-ids", apiPrefix),
+                                    String.format("%s/products/by-ids/**", apiPrefix)).permitAll()
+                            .requestMatchers(POST,
+                                    String.format("%s/products/**", apiPrefix)).hasRole(Role.ADMIN)
+                            .requestMatchers(PUT,
+                                    String.format("%s/products/**", apiPrefix)).hasRole(Role.ADMIN)
+                            .requestMatchers(DELETE,
+                                    String.format("%s/products/**", apiPrefix)).hasRole(Role.ADMIN)
 
-                           .requestMatchers(GET,
-                                   String.format("%s/products/images/**", apiPrefix)).permitAll()
-                           .requestMatchers(GET,
-                                   String.format("%s/products/**", apiPrefix)).permitAll()
-                           .requestMatchers(GET,
-                                   String.format("%s/products/detailsgit", apiPrefix)).permitAll()
+                            .requestMatchers(POST,
+                                    String.format("%s/orders/**", apiPrefix)).hasRole(Role.USER)
+                            .requestMatchers(GET,
+                                    String.format("%s/orders/**", apiPrefix)).permitAll()
+                            .requestMatchers(GET,
+                                    String.format("%s/orders/get-orders-by-keyword", apiPrefix)).hasRole(Role.ADMIN)
+                            .requestMatchers(GET,
+                                    String.format("%s/orders/user/**", apiPrefix)).permitAll()
+                            .requestMatchers(PUT,
+                                    String.format("%s/orders/**", apiPrefix)).hasRole(Role.ADMIN)
+                            .requestMatchers(DELETE,
+                                    String.format("%s/orders/**", apiPrefix)).hasRole(Role.ADMIN)
 
-                           .requestMatchers(GET,
-                                   String.format("%s/products/by-ids**", apiPrefix)).permitAll()
-                           .requestMatchers(POST,
-                                   String.format("%s/products/**", apiPrefix)).hasRole(Role.ADMIN)
-                           .requestMatchers(PUT,
-                                   String.format("%s/products/**", apiPrefix)).hasRole(Role.ADMIN)
-                           .requestMatchers(DELETE,
-                                   String.format("%s/products/**", apiPrefix)).hasRole(Role.ADMIN)
+                            .requestMatchers(POST,
+                                    String.format("%s/wishlists", apiPrefix)).hasRole(Role.USER) // Chỉ USER mới được tạo wishlist
+                            .requestMatchers(GET,
+                                    String.format("%s/wishlists", apiPrefix)).permitAll() // Nếu có GET /wishlists
+                            .requestMatchers(GET,
+                                    String.format("%s/wishlists/user/**", apiPrefix)).permitAll() // Lấy wishlist theo user (ai cũng xem được)
+                            .requestMatchers(GET,
+                                    String.format("%s/wishlists/product/**", apiPrefix)).permitAll() // Lấy wishlist theo product
+                            .requestMatchers(GET,
+                                    String.format("%s/wishlists/**", apiPrefix)).permitAll() // GET chi tiết wishlist theo id
+                            .requestMatchers(DELETE,
+                                    String.format("%s/wishlists/**", apiPrefix)).hasRole(Role.USER) // USER được xóa wishlist (có thể thay bằng ADMIN nếu cần kiểm soát chặt)
 
-                           .requestMatchers(POST,
-                                   String.format("%s/orders/**", apiPrefix)).hasRole(Role.USER)
-                           .requestMatchers(GET,
-                                   String.format("%s/orders/**", apiPrefix)).permitAll()
-                           .requestMatchers(GET,
-                                   String.format("%s/orders/get-orders-by-keyword", apiPrefix)).hasRole(Role.ADMIN)
-                           .requestMatchers(GET,
-                                   String.format("%s/orders/user/**", apiPrefix)).permitAll()
-                           .requestMatchers(PUT,
-                                   String.format("%s/orders/**", apiPrefix)).hasRole(Role.ADMIN)
-                           .requestMatchers(DELETE,
-                                   String.format("%s/orders/**", apiPrefix)).hasRole(Role.ADMIN)
+                            .requestMatchers(POST,
+                                    String.format("%s/order_details/**", apiPrefix)).hasRole(Role.USER)
+                            .requestMatchers(GET,
+                                    String.format("%s/order_details/**", apiPrefix)).hasAnyRole(Role.ADMIN, Role.USER)
+                            .requestMatchers(PUT,
+                                    String.format("%s/order_details/**", apiPrefix)).hasRole(Role.ADMIN)
+                            .requestMatchers(DELETE,
+                                    String.format("%s/order_details/**", apiPrefix)).hasRole(Role.ADMIN)
 
-                           .requestMatchers(POST,
-                                   String.format("%s/order_details/**", apiPrefix)).hasRole(Role.USER)
-                           .requestMatchers(GET,
-                                   String.format("%s/order_details/**", apiPrefix)).hasAnyRole(Role.ADMIN, Role.USER)
-                           .requestMatchers(PUT,
-                                   String.format("%s/order_details/**", apiPrefix)).hasRole(Role.ADMIN)
-                           .requestMatchers(DELETE,
-                                   String.format("%s/order_details/**", apiPrefix)).hasRole(Role.ADMIN)
-
-                           .anyRequest().authenticated();
-               })
-               .csrf(AbstractHttpConfigurer::disable);
-       http.cors(
-               new Customizer<CorsConfigurer<HttpSecurity>>() {
-                   @Override
-                   public void customize(CorsConfigurer<HttpSecurity> httpSecurityCorsConfigurer) {
-                       CorsConfiguration configuration = new CorsConfiguration();
-                       configuration.setAllowedOrigins(List.of("*"));
-                       configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-                       configuration.setAllowedHeaders(Arrays.asList("authorization", "content-type", "x-auth-token"));
-                       configuration.setExposedHeaders(List.of("x-auth-token"));
-                       UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-                       source.registerCorsConfiguration("/**", configuration);
-                       httpSecurityCorsConfigurer.configurationSource(source);
-                   }
-               }
-       );
+                            .anyRequest().authenticated();
+                })
+                .csrf(AbstractHttpConfigurer::disable);
+        http.cors(
+                new Customizer<CorsConfigurer<HttpSecurity>>() {
+                    @Override
+                    public void customize(CorsConfigurer<HttpSecurity> httpSecurityCorsConfigurer) {
+                        CorsConfiguration configuration = new CorsConfiguration();
+                        configuration.setAllowedOrigins(List.of("*"));
+                        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+                        configuration.setAllowedHeaders(Arrays.asList("authorization", "content-type", "x-auth-token"));
+                        configuration.setExposedHeaders(List.of("x-auth-token"));
+                        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+                        source.registerCorsConfiguration("/**", configuration);
+                        httpSecurityCorsConfigurer.configurationSource(source);
+                    }
+                }
+        );
         return http
                 .build();
     }

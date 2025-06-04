@@ -1,8 +1,10 @@
 package com.example.shopapp.controller;
 
 import com.example.shopapp.components.LocalizationUtils;
+import com.example.shopapp.components.TranslateMessages;
 import com.example.shopapp.dtos.OrderDTO;
 import com.example.shopapp.models.Order;
+import com.example.shopapp.response.ApiResponse;
 import com.example.shopapp.response.OrderPageResponse;
 import com.example.shopapp.response.OrderResponse;
 import com.example.shopapp.services.Order.IOrderService;
@@ -23,7 +25,7 @@ import java.util.List;
 @RestController
 @RequestMapping("${api.prefix}/orders")
 @RequiredArgsConstructor
-public class OrderController {
+public class OrderController extends TranslateMessages {
     private final IOrderService orderService;
     private final LocalizationUtils localizationUtils;
 
@@ -41,9 +43,16 @@ public class OrderController {
                 return ResponseEntity.badRequest().body(errorMessages);
             }
             OrderResponse orderResponse = orderService.createOrder(orderDTO);
-            return ResponseEntity.ok(orderResponse);
+            return ResponseEntity.ok().body(ApiResponse.builder()
+                    .success(true)
+                    .message(translate(MessageKeys.WISHLIST_SUCCESS))
+                    .payload(orderResponse)
+                    .build());
         }catch (Exception e){
-            return ResponseEntity.badRequest().body(e.getMessage());
+            return ResponseEntity.badRequest().body(ApiResponse.builder()
+                    .error(e.getMessage())
+                    .message(translate(MessageKeys.ERROR_MESSAGE)).error(e.getMessage()).build()
+            );
         }
     }
 
@@ -58,7 +67,7 @@ public class OrderController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<?> getOrder(@Valid @PathVariable("id") Long orderId){
+    public ResponseEntity<?> getOrder(@PathVariable("id") Long orderId){
         try{
             Order existingOrder =  orderService.getOrderById(orderId);
             return ResponseEntity.ok(OrderResponse.fromOrder(existingOrder));
@@ -70,7 +79,7 @@ public class OrderController {
     @PutMapping("/{id}")
      // công việc của admin
     public ResponseEntity<?> updateOrders(
-            @Valid @PathVariable() Long id,
+            @PathVariable() Long id,
             @Valid @RequestBody OrderDTO orderDTO
     ){
         try{
@@ -83,7 +92,7 @@ public class OrderController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteOrders(
-            @Valid @PathVariable() Long id
+            @PathVariable() Long id
     ){
         try{
             // xóa mềm => cập nhật trường active = false

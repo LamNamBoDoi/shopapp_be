@@ -65,6 +65,20 @@ public class ProductService implements IProductService{
         return listProduct.stream().map(ProductResponse::fromProduct).toList();
     }
 
+//    @Override
+//    public Page<ProductResponse> getAllProducts(
+//            String keyword,
+//            Long categoryId,
+//            PageRequest pageRequest) {
+//        // lấy danh sách sản phầm theo trang và giới hạn
+//        Page<Product> productsPage;
+//        productsPage = productRepository.searchProducts(categoryId, keyword, pageRequest);
+//
+//        return productsPage.map(
+//                ProductResponse::fromProduct
+//        );
+//    }
+
     @Override
     public Page<ProductResponse> getAllProducts(
             String keyword,
@@ -73,6 +87,7 @@ public class ProductService implements IProductService{
         // lấy danh sách sản phầm theo trang và giới hạn
         Page<Product> productsPage;
         productsPage = productRepository.searchProducts(categoryId, keyword, pageRequest);
+
         return productsPage.map(
                 ProductResponse::fromProduct
         );

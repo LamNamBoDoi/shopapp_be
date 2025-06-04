@@ -12,6 +12,7 @@ import com.example.shopapp.response.ApiResponse;
 import com.example.shopapp.response.LoginResponse;
 import com.example.shopapp.response.RegisterResponse;
 import com.example.shopapp.response.UserResponse;
+import com.example.shopapp.response.user.UserRegisterResponse;
 import com.example.shopapp.services.Token.TokenService;
 import com.example.shopapp.services.User.IUserService;
 import com.example.shopapp.components.LocalizationUtils;
@@ -35,41 +36,43 @@ import java.util.List;
 @RequiredArgsConstructor
 public class UserController extends TranslateMessages {
     private final IUserService userService;
-    private final LocalizationUtils localizationUtils;
     private final TokenService tokenService;
+
     @PostMapping("/register")
     @Transactional
-    public ResponseEntity<RegisterResponse> createUser(
+    public ResponseEntity<ApiResponse<?>> createUser(
             @Valid @RequestBody UserDTO userDTO,
-            BindingResult result
+            BindingResult bindingResult
     ){
         try{
-            if(result.hasErrors()){
-                List<String> errorMessages = result.getFieldErrors()
+            if(bindingResult.hasErrors()){
+                List<String> errorMessages = bindingResult.getFieldErrors()
                         .stream()
                         .map(FieldError::getDefaultMessage)
                         .toList();
                 return ResponseEntity.badRequest().body(
-                        RegisterResponse.builder()
-                                .message(errorMessages.toString())
+                        ApiResponse.builder()
+                                .message(translate(MessageKeys.ERROR_MESSAGE))
+                                .errors(errorMessages.stream().map(this::translate)
+                                        .toList())
                                 .build()
                 );
             }
             if(!userDTO.getPassword().equals(userDTO.getRetypePassword())){
-                return ResponseEntity.badRequest().body(RegisterResponse.builder()
-                                .message(localizationUtils.getLocalizedMessage(MessageKeys.PASSWORD_NOT_MATCH))
-                        .build());
+                return ResponseEntity.badRequest().body(ApiResponse.builder()
+                        .message(translate(MessageKeys.ERROR_MESSAGE))
+                        .error(translate(MessageKeys.PASSWORD_NOT_MATCH)).build()
+                );
             }
             User user = userService.createUser(userDTO);
-            return ResponseEntity.ok().body(RegisterResponse.builder()
-                            .message(localizationUtils.getLocalizedMessage(MessageKeys.REGISTER_SUCCESS))
-                            .user(user)
-                    .build());
+            return ResponseEntity.ok().body(ApiResponse.builder().success(true)
+                    .message(translate(MessageKeys.REGISTER_SUCCESS))
+                    .payload(UserRegisterResponse.fromUser(user)).build()
+            );
         }catch (Exception e){
-            return ResponseEntity.badRequest().body(
-                    RegisterResponse.builder()
-                            .message(localizationUtils.getLocalizedMessage(MessageKeys.ERROR_MESSAGE))
-                            .build()
+            return ResponseEntity.badRequest().body(ApiResponse.builder()
+                    .error(e.getMessage())
+                    .message(translate(MessageKeys.ERROR_MESSAGE)).error(e.getMessage()).build()
             );
         }
     }
@@ -188,4 +191,29 @@ public class UserController extends TranslateMessages {
             );
         }
     }
+
+    @PutMapping("/block/{userId}/{active}")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
+    public ResponseEntity<ApiResponse<?>> blockOrEnable(
+            @Valid @PathVariable("userId") long id,
+            @Valid @PathVariable("active") int active
+    ) {
+        try {
+            userService.blockOrEnable(id, active > 0);
+            if (active > 0) {
+                return ResponseEntity.ok(ApiResponse.builder()
+                        .success(true)
+                        .message(translate(MessageKeys.USER_ID_UNLOCKED))
+                        .build());
+            }
+            return ResponseEntity.ok(ApiResponse.builder()
+                    .success(true)
+                    .message(translate(MessageKeys.USER_ID_LOCKED))
+                    .build());
+        } catch (Exception e) {
+            return ResponseEntity.ok(ApiResponse.builder()
+                    .error(e.getMessage()).build());
+        }
+    }
+
 }

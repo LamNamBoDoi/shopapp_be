@@ -10,7 +10,7 @@ public class MessageKeys {
 
     // register
     public static final String PASSWORD_NOT_MATCH = "user.register.password_not_match";
-    public static final String REGISTER_SUCCESS = "user.register.register_successlly";
+    public static final String REGISTER_SUCCESS = "user.register.register_success";
     public static final String USER_NOT_FOUND = "user.not_found";
     public static final String TOKEN_EXPIRATION_TIME = "token.expiration.time";
     public static final String NOT_FOUND = "not_found";
@@ -18,6 +18,9 @@ public class MessageKeys {
     public static final String COMMENT_NOT_FOUND = "comment.not_found";
     public static final String UPDATE_COMMENT_SUCCESS = "comment.update.success";
     public static final String COMMENT_INSERT_SUCCESS = "comment.insert.success";
+
+    // wishlist
+    public static final String WISHLIST_SUCCESS = "wishlist.create.create_success";
 
     // validation
     public static final String ERROR_MESSAGE = "message.error";

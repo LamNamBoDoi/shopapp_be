@@ -7,7 +7,6 @@ import com.example.shopapp.dtos.ProductImageDTO;
 import com.example.shopapp.exceptions.DataNotFoundException;
 import com.example.shopapp.models.Product;
 import com.example.shopapp.models.ProductImage;
-import com.example.shopapp.response.ProductListResponse;
 import com.example.shopapp.response.ProductResponse;
 import com.example.shopapp.services.Product.IProductService;
 import com.example.shopapp.utils.MessageKeys;
@@ -45,7 +44,6 @@ public class ProductController {
     private final LocalizationUtils localizationUtils;
 
     @PostMapping("")
-    //http://localhost:8080/api/v1/products
     public ResponseEntity<?> createProduct(
             @Valid @RequestBody ProductDTO productDTO,
             BindingResult result
@@ -65,13 +63,6 @@ public class ProductController {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
-//    {
-//            "name": "macbook air 15 inch 2025",
-//            "price": 100000,
-//            "thumbnail": "",
-//            "description": "This is a test product",
-//            "category_id": 1
-//    }
 
     @PostMapping(value = "uploads/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     //http://localhost:8080/api/v1/products/uploads/{id}
@@ -182,13 +173,12 @@ public class ProductController {
 //                Sort.by("createdAt").descending()
                 Sort.by("id").ascending()
                 );
-        Page<ProductResponse> productPage = productService.getAllProducts(keyword,categoryId,pageRequest);
-        int totalPages = productPage.getTotalPages();
-        List<ProductResponse> products = productPage.getContent();
-//        return ResponseEntity.ok(ProductListResponse.builder()
-//                        .products(products)
-//                        .totalPages(totalPages)
-//                .build());
+        Page<ProductResponse> productPage;
+        if (categoryId == 0) {
+            productPage = productService.getAllProducts(keyword, null, pageRequest);
+        } else {
+            productPage = productService.getAllProducts(keyword, categoryId, pageRequest);
+        }
         return ResponseEntity.ok(productPage);
     }
 

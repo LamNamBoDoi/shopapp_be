@@ -1,8 +1,15 @@
 package com.example.shopapp.response;
 
+import com.example.shopapp.models.Comment;
 import com.example.shopapp.models.Product;
+import com.example.shopapp.models.Review;
+import com.example.shopapp.models.Wishlist;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.*;
+
+import java.util.Collections;
+import java.util.List;
 
 @AllArgsConstructor
 @NoArgsConstructor
@@ -17,6 +24,16 @@ public class ProductResponse extends BaseResponse{
     private String description;
     @JsonProperty("category_id")
     private Long categoryId;
+    @JsonProperty("comments")
+    private List<CommentResponse> comments;
+    @JsonProperty("wishlists")
+    private List<WishListResponse> wishlists;
+    @JsonProperty("average_rating")
+    private Double averageRating;
+    @JsonProperty("total_reviews")
+    private Long totalReviews;
+
+
 
     public static ProductResponse fromProduct(Product product){
         ProductResponse productResponse = ProductResponse.builder()
@@ -26,9 +43,29 @@ public class ProductResponse extends BaseResponse{
                 .thumbnail(product.getThumbnail())
                 .description(product.getDescription())
                 .categoryId(product.getCategory().getId())
+                .comments(CommentResponse.fromCommentList(product.getComments()))
+                .wishlists(WishListResponse.fromWishlistList(product.getWishlists()))
                 .build();
         productResponse.setCreatedAt(product.getCreatedAt());
         productResponse.setUpdatedAt(product.getUpdatedAt());
         return productResponse;
     }
+    public static ProductResponse fromProductWithRating(Product product, Double averageRating, Long totalReviews){
+        ProductResponse productResponse = ProductResponse.builder()
+                .id(product.getId())
+                .name(product.getName())
+                .price(product.getPrice())
+                .thumbnail(product.getThumbnail())
+                .description(product.getDescription())
+                .categoryId(product.getCategory() != null ? product.getCategory().getId() : null)
+                .averageRating(averageRating != null ? Math.round(averageRating * 10.0) / 10.0 : 0.0)
+                .totalReviews(totalReviews != null ? totalReviews : 0L)
+                .build();
+
+        productResponse.setCreatedAt(product.getCreatedAt());
+        productResponse.setUpdatedAt(product.getUpdatedAt());
+        return productResponse;
+    }
+
+
 }
