@@ -10,6 +10,7 @@ import com.example.shopapp.models.ProductImage;
 import com.example.shopapp.repositories.CategoryRepository;
 import com.example.shopapp.repositories.ProductImageRepository;
 import com.example.shopapp.repositories.ProductRepository;
+import com.example.shopapp.repositories.ReviewRepository;
 import com.example.shopapp.response.ProductResponse;
 import com.example.shopapp.utils.MessageKeys;
 import jakarta.transaction.Transactional;
@@ -27,6 +28,7 @@ public class ProductService implements IProductService{
     private final ProductRepository productRepository;
     private final CategoryRepository categoryRepository;
     private final ProductImageRepository productImageRepository;
+    private final ReviewRepository reviewRepository;
 
     @Override
     public Product createProduct(ProductDTO productDTO) throws DataNotFoundException {
@@ -65,20 +67,6 @@ public class ProductService implements IProductService{
         return listProduct.stream().map(ProductResponse::fromProduct).toList();
     }
 
-//    @Override
-//    public Page<ProductResponse> getAllProducts(
-//            String keyword,
-//            Long categoryId,
-//            PageRequest pageRequest) {
-//        // lấy danh sách sản phầm theo trang và giới hạn
-//        Page<Product> productsPage;
-//        productsPage = productRepository.searchProducts(categoryId, keyword, pageRequest);
-//
-//        return productsPage.map(
-//                ProductResponse::fromProduct
-//        );
-//    }
-
     @Override
     public Page<ProductResponse> getAllProducts(
             String keyword,
@@ -88,9 +76,12 @@ public class ProductService implements IProductService{
         Page<Product> productsPage;
         productsPage = productRepository.searchProducts(categoryId, keyword, pageRequest);
 
-        return productsPage.map(
-                ProductResponse::fromProduct
-        );
+        return productsPage.map(product -> {
+            // Lấy thông tin rating cho từng product
+            Double averageRating = reviewRepository.getAverageRatingByProductId(product.getId());
+            Long totalReviews = reviewRepository.countReviewsByProductId(product.getId());
+            return ProductResponse.fromProductWithRating(product, averageRating, totalReviews);
+        });
     }
 
     @Override

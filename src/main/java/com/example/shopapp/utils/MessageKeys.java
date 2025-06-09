@@ -22,6 +22,9 @@ public class MessageKeys {
     // wishlist
     public static final String WISHLIST_SUCCESS = "wishlist.create.create_success";
 
+    // review
+    public static final String REVIEW_SUCCESS = "review.create.create_success";
+
     // validation
     public static final String ERROR_MESSAGE = "message.error";
     public static final String PHONE_NUMBER_REQUIRED = "phone_number.required";

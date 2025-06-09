@@ -58,6 +58,8 @@ public class ProductResponse extends BaseResponse{
                 .thumbnail(product.getThumbnail())
                 .description(product.getDescription())
                 .categoryId(product.getCategory() != null ? product.getCategory().getId() : null)
+                .comments(CommentResponse.fromCommentList(product.getComments()))
+                .wishlists(WishListResponse.fromWishlistList(product.getWishlists()))
                 .averageRating(averageRating != null ? Math.round(averageRating * 10.0) / 10.0 : 0.0)
                 .totalReviews(totalReviews != null ? totalReviews : 0L)
                 .build();

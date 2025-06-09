@@ -28,6 +28,7 @@ public class Review extends BaseEntity{
     @JoinColumn(name = "product_id")
     private Product product;
 
+    @Column(name = "rating")
     private int rating;
 
     @Column(length = 1000)
@@ -35,5 +36,4 @@ public class Review extends BaseEntity{
 
     @Column(name = "status")
     private String status;
-
 }

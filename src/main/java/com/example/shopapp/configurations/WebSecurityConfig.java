@@ -110,6 +110,20 @@ public class WebSecurityConfig {
                                     String.format("%s/wishlists/**", apiPrefix)).hasRole(Role.USER) // USER được xóa wishlist (có thể thay bằng ADMIN nếu cần kiểm soát chặt)
 
                             .requestMatchers(POST,
+                                    String.format("%s/reviews", apiPrefix)).hasRole(Role.USER) // Chỉ USER mới được tạo reviews
+                            .requestMatchers(GET,
+                                    String.format("%s/reviews", apiPrefix)).permitAll() // Nếu có GET /reviews
+                            .requestMatchers(GET,
+                                    String.format("%s/reviews/user/**", apiPrefix)).permitAll() // Lấy reviews theo user (ai cũng xem được)
+                            .requestMatchers(GET,
+                                    String.format("%s/reviews/product/**", apiPrefix)).permitAll() // Lấy reviews theo product
+                            .requestMatchers(GET,
+                                    String.format("%s/reviews/**", apiPrefix)).permitAll() // GET chi tiết reviews theo id
+                            .requestMatchers(DELETE,
+                                    String.format("%s/reviews/**", apiPrefix)).hasRole(Role.USER) // USER được xóa reviews (có thể thay bằng ADMIN nếu cần kiểm soát chặt)
+
+
+                            .requestMatchers(POST,
                                     String.format("%s/order_details/**", apiPrefix)).hasRole(Role.USER)
                             .requestMatchers(GET,
                                     String.format("%s/order_details/**", apiPrefix)).hasAnyRole(Role.ADMIN, Role.USER)
