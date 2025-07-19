@@ -16,7 +16,6 @@ import java.util.List;
 @AllArgsConstructor
 @NoArgsConstructor
 @Table(name = "products")
-// event-driven approach with spring data jpa
 @EntityListeners(ProgressListener.class)
 public class Product extends BaseEntity{
     @Id

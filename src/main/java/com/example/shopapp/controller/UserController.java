@@ -19,13 +19,18 @@ import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.support.DefaultMessageSourceResolvable;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.annotation.*;
 
+import javax.print.attribute.standard.Media;
 import java.util.List;
 
 @RestController
@@ -39,10 +44,10 @@ public class UserController extends TranslateMessages {
     @Transactional
     public ResponseEntity<ApiResponse<?>> createUser(
             @Valid @RequestBody UserDTO userDTO,
-            BindingResult bindingResult
-    ){
-        try{
-            if(bindingResult.hasErrors()){
+            BindingResult bindingResult, HttpServletRequest request
+    ) {
+        try {
+            if (bindingResult.hasErrors()) {
                 List<String> errorMessages = bindingResult.getFieldErrors()
                         .stream()
                         .map(FieldError::getDefaultMessage)
@@ -55,18 +60,27 @@ public class UserController extends TranslateMessages {
                                 .build()
                 );
             }
-            if(!userDTO.getPassword().equals(userDTO.getRetypePassword())){
+            if (!userDTO.getPassword().equals(userDTO.getRetypePassword())) {
                 return ResponseEntity.badRequest().body(ApiResponse.builder()
                         .message(translate(MessageKeys.ERROR_MESSAGE))
                         .error(translate(MessageKeys.PASSWORD_NOT_MATCH)).build()
                 );
             }
-            User user = userService.createUser(userDTO);
+            User newUser = userService.createUser(userDTO);
+            String tokenGenerator = userService.login(userDTO.getPhoneNumber(), userDTO.getPassword());
+            String userAgent = request.getHeader("User-Agent");
+            Token token = tokenService.addTokenEndRefreshToken(newUser, tokenGenerator, isMoblieDevice(userAgent));
+
             return ResponseEntity.ok().body(ApiResponse.builder().success(true)
                     .message(translate(MessageKeys.REGISTER_SUCCESS))
-                    .payload(UserRegisterResponse.fromUser(user)).build()
+                    .payload(
+                            LoginResponse.builder()
+                                    .token(token.getToken())
+                                    .refreshToken(token.getRefreshToken())
+                                    .user(UserRegisterResponse.fromUser(newUser)).build()
+                    ).build()
             );
-        }catch (Exception e){
+        } catch (Exception e) {
             return ResponseEntity.badRequest().body(ApiResponse.builder()
                     .error(e.getMessage())
                     .message(translate(MessageKeys.ERROR_MESSAGE)).error(e.getMessage()).build()
@@ -79,9 +93,9 @@ public class UserController extends TranslateMessages {
             @Valid @RequestBody UserLoginDTO userLoginDTO,
             HttpServletRequest request,
             BindingResult bindingResult
-            ){
+    ) {
         try {
-            if(bindingResult.hasErrors()){
+            if (bindingResult.hasErrors()) {
                 List<String> errorMessages = bindingResult.getFieldErrors().stream()
                         .map(DefaultMessageSourceResolvable::getDefaultMessage).toList();
                 return ResponseEntity.badRequest().body(
@@ -92,10 +106,10 @@ public class UserController extends TranslateMessages {
                                         .toList()).build()
                 );
             }
-           String tokenGenerator = userService.login(
-                   userLoginDTO.getPhoneNumber(),
-                   userLoginDTO.getPassword()
-           );
+            String tokenGenerator = userService.login(
+                    userLoginDTO.getPhoneNumber(),
+                    userLoginDTO.getPassword()
+            );
 
             // kiểm tra là điện thoại hay web đăng nhập
             String userAgent = request.getHeader("User-Agent");
@@ -108,6 +122,7 @@ public class UserController extends TranslateMessages {
                     .payload(LoginResponse.builder()
                             .token(token.getToken())
                             .refreshToken(token.getRefreshToken())
+                            .user(UserRegisterResponse.fromUser(user))
                             .build())
                     .build();
             return ResponseEntity.ok().body(apiResponse);
@@ -121,11 +136,14 @@ public class UserController extends TranslateMessages {
     }
 
     // Lấy ra thông tin chi tiết của người dùng thông qua token truyền vào
-    @PostMapping("/details")
+    @GetMapping("/details")
     public ResponseEntity<ApiResponse<?>> getUserDetails(
             @RequestHeader("Authorization") String authorizationHeader
     ) {
         try {
+            if (!authorizationHeader.startsWith("Bearer ")) {
+                throw new RuntimeException("Invalid Authorization header");
+            }
             String extractedToken = authorizationHeader.substring(7);
             User user = userService.getUserDetailsFromToken(extractedToken);
             return ResponseEntity.ok(ApiResponse.<UserResponse>builder().success(true)
@@ -140,15 +158,15 @@ public class UserController extends TranslateMessages {
     }
 
     @PostMapping("/refresh-token")
-    public ResponseEntity<ApiResponse<LoginResponse>> refreshToken(@RequestBody RefreshTokenDTO refreshTokenDTO){
-        try{
+    public ResponseEntity<ApiResponse<LoginResponse>> refreshToken(@RequestBody RefreshTokenDTO refreshTokenDTO) {
+        try {
             ApiResponse<LoginResponse> apiResponse = ApiResponse.<LoginResponse>builder()
                     .success(true)
                     .message(translate(MessageKeys.REFRESH_TOKEN_SUCCESS))
                     .payload(userService.refreshToken(refreshTokenDTO))
                     .build();
             return ResponseEntity.ok().body(apiResponse);
-        }catch (Exception e){
+        } catch (Exception e) {
             ApiResponse<LoginResponse> apiResponse = ApiResponse.<LoginResponse>builder()
                     .message(translate(MessageKeys.ERROR_REFRESH_TOKEN))
                     .error(e.getMessage()).build();
@@ -161,19 +179,22 @@ public class UserController extends TranslateMessages {
         return userAgent.toLowerCase().contains("mobile");
     }
 
-    @PutMapping("/details/{userID}")
+    @PostMapping(value = "/details/{userId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Transactional
     @PreAuthorize("hasRole('ROLE_USER')")
     public ResponseEntity<ApiResponse<?>> updateUserDetails(
             @PathVariable Long userId,
-            @RequestBody @Valid UpdateUserDTO updateUserDTO,
+            @ModelAttribute @Valid UpdateUserDTO updateUserDTO,
             @RequestHeader("Authorization") String token
-            ){
-        try{
+    ) {
+        try {
+            if (!token.startsWith("Bearer ")) {
+                throw new RuntimeException("Invalid Authorization header");
+            }
             String extractedToken = token.substring(7);
             User user = userService.getUserDetailsFromToken(extractedToken);
-            if(!user.getId().equals(userId)){
-                return  ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+            if (!user.getId().equals(userId)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
             }
             User updateUser = userService.updateUser(userId, updateUserDTO);
             return ResponseEntity.ok(ApiResponse.<UserResponse>builder()
@@ -181,7 +202,7 @@ public class UserController extends TranslateMessages {
                     .message(translate(MessageKeys.MESSAGE_UPDATE_GET))
                     .payload(UserResponse.fromUser(updateUser)).build()
             );
-        }catch (Exception e){
+        } catch (Exception e) {
             return ResponseEntity.badRequest().body(
                     ApiResponse.<UserResponse>builder()
                             .message(translate(MessageKeys.MESSAGE_ERROR_GET)).error(e.getMessage()).build()
@@ -191,6 +212,7 @@ public class UserController extends TranslateMessages {
 
     @PutMapping("/block/{userId}/{active}")
     @PreAuthorize("hasRole('ROLE_ADMIN')")
+    @Transactional
     public ResponseEntity<ApiResponse<?>> blockOrEnable(
             @Valid @PathVariable("userId") long id,
             @Valid @PathVariable("active") int active
@@ -213,4 +235,21 @@ public class UserController extends TranslateMessages {
         }
     }
 
+    @GetMapping("")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
+    public ResponseEntity<?> getAllUsers(
+            @RequestParam(defaultValue = "", name = "keyword", required = false) String keyword,
+            @RequestParam(defaultValue = "0", name = "page") int page,
+            @RequestParam(defaultValue = "10", name = "limit") int limit
+    ){
+        try{
+            PageRequest pageRequest = PageRequest.of(page, limit, Sort.by("id").ascending());
+            Page<UserResponse> usersPage = userService.findAllUsers(keyword, pageRequest)
+                    .map(UserResponse::fromUser);
+            return ResponseEntity.ok(usersPage);
+        }catch (Exception e){
+            return ResponseEntity.badRequest().body(ApiResponse.builder()
+                    .error(e.getMessage()).build());
+        }
+    }
 }

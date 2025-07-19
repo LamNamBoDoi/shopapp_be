@@ -11,4 +11,5 @@ public class WebConfig implements WebMvcConfigurer {
         registry.addResourceHandler("/api/v1/products/images/**")
                 .addResourceLocations("file:/D:/savecode/springboot/shopapp/uploads/");
     }
+
 }

@@ -20,4 +20,7 @@ public class Category {
     @Column(name = "name", nullable = false)
     private String name;
 
+    @Column(name = "thumbnail", length = 300)
+    private String thumbnail;
+
 }

@@ -95,4 +95,9 @@ public class OrderDetailService implements IOrderDetailService {
     public List<OrderDetail> findByOrderId(Long orderId) {
         return orderDetailRepository.findByOrderId(orderId);
     }
+
+    @Override
+    public List<Product> getProductsPurchasedByUserID(Long userId) {
+        return orderDetailRepository.findProductsByUserId(userId);
+    }
 }

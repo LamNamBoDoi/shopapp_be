@@ -1,6 +1,7 @@
 package com.example.shopapp.response;
 
 import com.example.shopapp.models.Review;
+import com.example.shopapp.models.Wishlist;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -8,6 +9,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 @AllArgsConstructor
@@ -23,7 +25,7 @@ public class ReviewResponse {
     @JsonProperty("user_id")
     private Long userId;
 
-    @JsonProperty("username")
+    @JsonProperty("user_name")
     private String username;
 
     @JsonProperty("rating")
@@ -43,11 +45,17 @@ public class ReviewResponse {
                 .id(review.getId())
                 .productId(review.getProduct().getId())
                 .userId(review.getUser().getId())
-                .username(review.getUser().getUsername()) // Giả sử User có field username
+                .username(review.getUser().getFullName()) // Giả sử User có field username
                 .rating(review.getRating())
                 .comment(review.getComment())
                 .status(review.getStatus())
                 .createdAt(review.getCreatedAt())
                 .build();
+    }
+
+    public static List<ReviewResponse> fromReviewList(List<Review> reviews) {
+        return reviews.stream()
+                .map(ReviewResponse::fromReview)
+                .toList();
     }
 }

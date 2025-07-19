@@ -91,7 +91,7 @@ public class OrderService extends TranslateMessages implements IOrderService{
             orderDetail.setProduct(product);
             orderDetail.setNumberOfProducts(quantity);
             orderDetail.setPrice(product.getPrice());
-
+            orderDetail.setTotalMoney(product.getPrice()*quantity);
             // thêm orderDetails vào danh sách
             orderDetails.add(orderDetail);
         }

@@ -39,6 +39,9 @@ public class User extends BaseEntity implements UserDetails {
     @Column(name = "is_active")
     private boolean active;
 
+    @Column(name = "thumbnail", length = 300)
+    private String thumbnail;
+
     @Column(name = "date_of_birth")
     private Date dateOfBirth;
 

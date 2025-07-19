@@ -12,13 +12,16 @@ import com.example.shopapp.repositories.ProductImageRepository;
 import com.example.shopapp.repositories.ProductRepository;
 import com.example.shopapp.repositories.ReviewRepository;
 import com.example.shopapp.response.ProductResponse;
+import com.example.shopapp.services.FileStorageService.FileStorageService;
 import com.example.shopapp.utils.MessageKeys;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
 
@@ -29,28 +32,56 @@ public class ProductService implements IProductService{
     private final CategoryRepository categoryRepository;
     private final ProductImageRepository productImageRepository;
     private final ReviewRepository reviewRepository;
+    private final FileStorageService fileStorageService;
 
     @Override
-    public Product createProduct(ProductDTO productDTO) throws DataNotFoundException {
+    public Product createProduct(ProductDTO productDTO) throws DataNotFoundException, IOException {
+        // 1. Kiểm tra category
         Category existingCategory = categoryRepository.findById(productDTO.getCategoryId())
-                .orElseThrow(() ->
-                        new DataNotFoundException(
-                                "Cannot find category with id: "+productDTO.getCategoryId()));
+                .orElseThrow(() -> new DataNotFoundException("Cannot find category with id: " + productDTO.getCategoryId()));
+
+        // 2. Lưu thumbnail nếu có
+        String thumbnail = null;
+        if (productDTO.getThumbnail() != null && !productDTO.getThumbnail().isEmpty()) {
+            thumbnail = fileStorageService.storeFile(productDTO.getThumbnail());
+        }
+
+        // 3. Tạo sản phẩm
         Product newProduct = Product.builder()
                 .name(productDTO.getName())
                 .price(productDTO.getPrice())
-                .thumbnail(productDTO.getThumbnail())
+                .thumbnail(thumbnail)
                 .category(existingCategory)
                 .description(productDTO.getDescription())
                 .build();
-        return productRepository.save(newProduct);
+        productRepository.save(newProduct);
+
+        // 4. Xử lý và lưu các product images
+        List<MultipartFile> imageFiles = productDTO.getProductImages();
+        if (imageFiles != null && !imageFiles.isEmpty()) {
+            int existingImageCount = 0;
+            for (MultipartFile image : imageFiles) {
+                if (existingImageCount >= ProductImage.MAXIMUM_IMAGES_PER_PRODUCT) break;
+
+                String imageFilename = fileStorageService.storeFile(image);
+                ProductImage productImage = ProductImage.builder()
+                        .product(newProduct)
+                        .imageUrl(imageFilename)
+                        .build();
+                productImageRepository.save(productImage);
+                existingImageCount++;
+            }
+        }
+        return newProduct;
     }
 
     @Override
-    public Product getDetailProducts(long productId) throws DataNotFoundException {
+    public ProductResponse getDetailProducts(long productId) throws DataNotFoundException {
         Optional<Product> optionalProduct = productRepository.getDetailProducts(productId);
         if (optionalProduct.isPresent()) {
-            return optionalProduct.get();
+            Double averageRating = reviewRepository.getAverageRatingByProductId(optionalProduct.get().getId());
+            Long totalReviews = reviewRepository.countReviewsByProductId(optionalProduct.get().getId());
+            return ProductResponse.fromProductWithRating(optionalProduct.get(), averageRating, totalReviews);
         }
         throw new DataNotFoundException(MessageKeys.PRODUCT_NOT_FOUND);
     }
@@ -84,9 +115,11 @@ public class ProductService implements IProductService{
         });
     }
 
+
+
     @Override
     @Transactional
-    public Product updateProduct(Long id, ProductDTO productDTO) throws DataNotFoundException {
+    public Product updateProduct(Long id, ProductDTO productDTO) throws DataNotFoundException, IOException {
         Product existingProduct = getProductById(id);
         Category existingCategory = categoryRepository.findById(productDTO.getCategoryId())
                 .orElseThrow(() ->
@@ -97,7 +130,27 @@ public class ProductService implements IProductService{
         existingProduct.setCategory(existingCategory);
         existingProduct.setPrice(productDTO.getPrice());
         existingProduct.setDescription(productDTO.getDescription());
-        existingProduct.setThumbnail(productDTO.getThumbnail());
+        if (productDTO.getThumbnail() != null && !productDTO.getThumbnail().isEmpty()) {
+            String thumbnailUrl = fileStorageService.storeFile(productDTO.getThumbnail());
+            existingProduct.setThumbnail(thumbnailUrl);
+        }
+
+        List<MultipartFile> newImages = productDTO.getProductImages();
+        if (newImages != null && !newImages.isEmpty()) {
+            productImageRepository.deleteByProductId(existingProduct.getId());
+
+            int count = 0;
+            for (MultipartFile image : newImages) {
+                if (count >= ProductImage.MAXIMUM_IMAGES_PER_PRODUCT) break;
+                String imageName = fileStorageService.storeFile(image);
+                ProductImage productImage = ProductImage.builder()
+                        .product(existingProduct)
+                        .imageUrl(imageName)
+                        .build();
+                productImageRepository.save(productImage);
+                count++;
+            }
+        }
 
         return productRepository.save(existingProduct);
     }
@@ -132,6 +185,10 @@ public class ProductService implements IProductService{
         if(size >= ProductImage.MAXIMUM_IMAGES_PER_PRODUCT){
             throw new InvalidParamException("Number of images must be <= "+ProductImage.MAXIMUM_IMAGES_PER_PRODUCT);
         }
+        if (existingProduct.getThumbnail() == null) {
+            existingProduct.setThumbnail(newProductImage.getImageUrl());
+        }
+        productRepository.save(existingProduct);
         return productImageRepository.save(newProductImage);
     }
 }

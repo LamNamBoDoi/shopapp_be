@@ -14,6 +14,7 @@ import com.example.shopapp.repositories.RoleRepository;
 import com.example.shopapp.repositories.TokenRepository;
 import com.example.shopapp.repositories.UserRepository;
 import com.example.shopapp.response.LoginResponse;
+import com.example.shopapp.services.FileStorageService.FileStorageService;
 import com.example.shopapp.services.Token.TokenService;
 import com.example.shopapp.utils.MessageKeys;
 import lombok.RequiredArgsConstructor;
@@ -32,7 +33,7 @@ import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
-public class UserService extends TranslateMessages implements IUserService{
+public class UserService extends TranslateMessages implements IUserService {
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
@@ -40,24 +41,31 @@ public class UserService extends TranslateMessages implements IUserService{
     private final JwtTokenUtils jwtTokenUtils;
     private final TokenService refreshTokenService;
     private final AuthenticationManager authenticationManager;
+    private final FileStorageService fileStorageService;
+
     @Override
-    public User createUser(UserDTO userDTO)  throws Exception {
+    public User createUser(UserDTO userDTO) throws Exception {
         String phoneNumber = userDTO.getPhoneNumber();
         // Kiểm tra xem số điện thoại đã tồn tại chưa
-        if(userRepository.existsByPhoneNumber(phoneNumber)){
+        if (userRepository.existsByPhoneNumber(phoneNumber)) {
             throw new DataIntegrityViolationException("Phone number already exists");
         }
 
         Role role = roleRepository.findById(userDTO.getRoleId())
-                .orElseThrow(()-> new DataNotFoundException("Role not found"));
-        if(role.getName().toUpperCase().equals(Role.ADMIN)){
+                .orElseThrow(() -> new DataNotFoundException("Role not found"));
+        if (role.getName().toUpperCase().equals(Role.ADMIN)) {
             throw new PermissionDenyException("You cannot register an admin account");
+        }
+        String thumbnail = null;
+        if (userDTO.getThumbnail() != null && !userDTO.getThumbnail().isEmpty()) {
+            thumbnail = fileStorageService.storeFile(userDTO.getThumbnail());
         }
         // convert userdto sang user
         User newUser = User.builder()
                 .fullName(userDTO.getFullName())
                 .phoneNumber(userDTO.getPhoneNumber())
                 .address(userDTO.getAddress())
+                .thumbnail(thumbnail)
                 .password(userDTO.getPassword())
                 .dateOfBirth(userDTO.getDateOfBirth())
                 .facebookAccountId(userDTO.getFacebookAccountId())
@@ -66,7 +74,7 @@ public class UserService extends TranslateMessages implements IUserService{
 
         newUser.setRole(role);
         // Kiểm tra nếu có accountId, không yêu cầu password
-        if(userDTO.getFacebookAccountId()==0 && userDTO.getGoogleAccountId()==0){
+        if (userDTO.getFacebookAccountId() == 0 && userDTO.getGoogleAccountId() == 0) {
             String password = userDTO.getPassword();
             String encoderPassword = passwordEncoder.encode(password);
             newUser.setPassword(encoderPassword);
@@ -77,19 +85,19 @@ public class UserService extends TranslateMessages implements IUserService{
     @Override
     public String login(String phoneNumber, String password) throws DataNotFoundException {
         Optional<User> optionalUser = userRepository.findByPhoneNumber(phoneNumber);
-        if(optionalUser.isEmpty()){
+        if (optionalUser.isEmpty()) {
             throw new DataNotFoundException("Invalid phonenumber / password");
         }
         User existingUser = optionalUser.get();
         // check password
-        if(existingUser.getFacebookAccountId()==0 && existingUser.getGoogleAccountId()==0){
-            if(!passwordEncoder.matches(password, existingUser.getPassword())){
+        if (existingUser.getFacebookAccountId() == 0 && existingUser.getGoogleAccountId() == 0) {
+            if (!passwordEncoder.matches(password, existingUser.getPassword())) {
                 throw new BadCredentialsException("Wrong phone number or password");
             }
         }
         // authenticate with java spring security
         UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(
-          phoneNumber, password,
+                phoneNumber, password,
                 existingUser.getAuthorities()
         );
         authenticationManager.authenticate(authenticationToken);
@@ -99,16 +107,16 @@ public class UserService extends TranslateMessages implements IUserService{
 
     @Override
     public User getUserDetailsFromToken(String token) throws Exception {
-        if(jwtTokenUtils.isTokenExpired(token)){
+        if (jwtTokenUtils.isTokenExpired(token)) {
             throw new Exception(translate(MessageKeys.TOKEN_EXPIRATION_TIME));
         }
 
         String phoneNumber = jwtTokenUtils.extractPhonenumber(token);
         Optional<User> optionalUser = userRepository.findByPhoneNumber(phoneNumber);
 
-        if(optionalUser.isPresent()){
+        if (optionalUser.isPresent()) {
             return optionalUser.get();
-        }else{
+        } else {
             throw new DataNotFoundException(translate(MessageKeys.USER_NOT_FOUND));
         }
     }
@@ -116,11 +124,11 @@ public class UserService extends TranslateMessages implements IUserService{
     @Override
     public User updateUser(Long userId, UpdateUserDTO updateUserDTO) throws Exception {
         User existingUser = userRepository.findById(userId)
-                .orElseThrow(()->new DataNotFoundException(translate(MessageKeys.USER_NOT_FOUND)));
+                .orElseThrow(() -> new DataNotFoundException(translate(MessageKeys.USER_NOT_FOUND)));
 
         String phoneNumber = updateUserDTO.getPhoneNumber();
-        if(!existingUser.getPhoneNumber().equals(phoneNumber)
-        && userRepository.existsByPhoneNumber(phoneNumber)){
+        if (!existingUser.getPhoneNumber().equals(phoneNumber)
+                && userRepository.existsByPhoneNumber(phoneNumber)) {
             throw new DataIntegrityViolationException(translate(MessageKeys.PASSWORD_NOT_MATCH));
         }
 
@@ -147,7 +155,17 @@ public class UserService extends TranslateMessages implements IUserService{
             String newPassword = passwordEncoder.encode(updateUserDTO.getPassword());
             existingUser.setPassword(newPassword);
         }
+        if(updateUserDTO.getThumbnail() != null && !updateUserDTO.getThumbnail().isEmpty()){
+            fileStorageService.deleteFile(existingUser.getThumbnail());
+            String thumbnailUrl = fileStorageService.storeFile(updateUserDTO.getThumbnail());
+            existingUser.setThumbnail(thumbnailUrl);
+        }
         return userRepository.save(existingUser);
+    }
+
+    @Override
+    public Page<User> findAllUsers(String keyword, Pageable pageable) {
+        return userRepository.findAll(keyword, pageable);
     }
 
     // dùng refresh_token để tạo lại token mới
@@ -156,7 +174,7 @@ public class UserService extends TranslateMessages implements IUserService{
         Token token = refreshTokenService.verifyRefreshToken(refreshTokenDTO.getRefreshToken());
 
         // kiểm tra refreshToken còn hạn không
-        if(token.getExpirationTime().isBefore(Instant.now())){
+        if (token.getRefreshExpirationTime().isBefore(Instant.now())) {
             throw new PermissionDenyException(translate(MessageKeys.APP_PERMISSION_DENY_EXCEPTION));
         }
 
@@ -167,10 +185,6 @@ public class UserService extends TranslateMessages implements IUserService{
                 .build();
     }
 
-    @Override
-    public Page<User> findAllUsers(String keyword, Pageable pageable) {
-        return userRepository.findAll(keyword, pageable);
-    }
 
     @Override
     public void resetPassword(Long userId, String newPassword) throws Exception {

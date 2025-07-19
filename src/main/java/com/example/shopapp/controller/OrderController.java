@@ -76,6 +76,7 @@ public class OrderController extends TranslateMessages {
         }
     }
 
+
     @PutMapping("/{id}")
      // công việc của admin
     public ResponseEntity<?> updateOrders(
@@ -103,9 +104,7 @@ public class OrderController extends TranslateMessages {
         }
     }
 
-    // lấy ra tất cả các đơn hàng với quyền admin
-    @PreAuthorize("hasRole('ROLE_ADMIN')")
-    @GetMapping("/get-order-by-keyword")
+    @GetMapping("/get-orders-by-keyword")
     public ResponseEntity<OrderPageResponse> getOrderByKeyword(
             @RequestParam(defaultValue = "", required = false) String keyword,
             @RequestParam(defaultValue = "0", name = "page") int page,

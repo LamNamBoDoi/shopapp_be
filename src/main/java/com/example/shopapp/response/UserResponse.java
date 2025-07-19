@@ -26,6 +26,8 @@ public class UserResponse {
     @JsonProperty("is_active")
     private boolean active;
 
+    private String thumbnail;
+
     @JsonProperty("date_of_birth")
     private Date dateOfBirth;
 
@@ -44,6 +46,7 @@ public class UserResponse {
                 .phoneNumber(user.getPhoneNumber())
                 .address(user.getAddress())
                 .active(user.isActive())
+                .thumbnail(user.getThumbnail())
                 .dateOfBirth(user.getDateOfBirth())
                 .facebookAccountId(user.getFacebookAccountId())
                 .googleAccountId(user.getGoogleAccountId())

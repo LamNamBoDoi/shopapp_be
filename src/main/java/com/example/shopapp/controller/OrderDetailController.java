@@ -1,11 +1,11 @@
 package com.example.shopapp.controller;
 
 import com.example.shopapp.components.LocalizationUtils;
+import com.example.shopapp.components.TranslateMessages;
 import com.example.shopapp.dtos.OrderDetailDTO;
 import com.example.shopapp.exceptions.DataNotFoundException;
 import com.example.shopapp.models.OrderDetail;
-import com.example.shopapp.response.OrderDetailResponse;
-import com.example.shopapp.response.OrderResponse;
+import com.example.shopapp.response.*;
 import com.example.shopapp.services.OrderDetailService.IOrderDetailService;
 import com.example.shopapp.utils.MessageKeys;
 import jakarta.validation.Valid;
@@ -18,7 +18,7 @@ import java.util.List;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("${api.prefix}/order_details")
-public class OrderDetailController {
+public class OrderDetailController extends TranslateMessages {
     private final IOrderDetailService orderDetailService;
     private final LocalizationUtils localizationUtils;
 
@@ -47,6 +47,24 @@ public class OrderDetailController {
         List<OrderDetail> orderDetails = orderDetailService.findByOrderId(orderId);
         List<OrderDetailResponse> orderDetailResponses = orderDetails.stream().map(OrderDetailResponse::fromOrderDetail).toList();
         return ResponseEntity.ok(orderDetailResponses);
+    }
+
+    @GetMapping("/users/{userId}")
+    public ResponseEntity<ApiResponse<?>> getProductPurchased(@PathVariable Long userId) {
+        try {
+            List<ProductResponse> productDetails = orderDetailService.getProductsPurchasedByUserID(userId).stream().map(
+                    (ProductResponse::fromProduct)
+            ).toList();
+            return ResponseEntity.ok(ApiResponse.<List<ProductResponse>>builder()
+                    .success(true)
+                    .message(translate(MessageKeys.GET_INFORMATION_SUCCESS))
+                    .payload(productDetails).build());
+        }catch (Exception e){
+            return ResponseEntity.badRequest().body(
+                    ApiResponse.builder()
+                            .message(translate(MessageKeys.MESSAGE_ERROR_GET)).error(e.getMessage()).build()
+            );
+        }
     }
 
     @PutMapping("/{id}")

@@ -46,7 +46,7 @@ public class ReviewService extends TranslateMessages implements IReviewService {
                 .comment(reviewDTO.getComment())
                 .rating(reviewDTO.getRating())
                 .build();
-
+        reviewRepository.save(newReview);
         return ReviewResponse.fromReview(newReview);
     }
 

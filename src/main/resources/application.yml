@@ -23,8 +23,8 @@ spring:
 api:
   prefix: /api/v1
 jwt:
-  expiration: 2592000    #30 days = 30 * 24 * 60 * 60
-  expiration-refresh-token: 5184000 #60 days = 60 * 24 * 60 * 60
+  expiration: 3600           # 1 giờ - dễ test
+  expiration-refresh-token: 2592000  # 30 ngày
   secretKey: BNXbZLuOZATSXFzP+DyGlqmM9CXaRI3d3JTTE5bOd0E=
 
 logging:

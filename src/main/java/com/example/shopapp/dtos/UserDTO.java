@@ -7,6 +7,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Date;
 
@@ -27,6 +28,8 @@ public class UserDTO {
     @NotBlank(message = "Password cannot be blank")
     private String password;
 
+    private MultipartFile thumbnail;
+
     @JsonProperty("retype_password")
     private String retypePassword;
 
@@ -42,4 +45,7 @@ public class UserDTO {
     @NotNull(message = "Role ID is required")
     @JsonProperty("role_id")
     private Long roleId;
+
+    @JsonProperty("is_active")
+    private boolean active;
 }
