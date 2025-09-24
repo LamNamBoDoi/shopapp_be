@@ -124,3 +124,48 @@ SET thumbnail = (
     WHERE products.id = product_images.product_id
     LIMIT 1
 )
+
+-- Bảng user devices (lưu FCM tokens)
+CREATE TABLE user_devices (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    user_id BIGINT NOT NULL,
+    device_token VARCHAR(500) NOT NULL UNIQUE,
+    device_type ENUM('MOBILE', 'WEB') NOT NULL,
+    device_name VARCHAR(100),
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_user_id (user_id),
+    INDEX idx_device_token (device_token)
+);
+
+-- Bảng notifications
+CREATE TABLE notifications (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    user_id BIGINT NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    body TEXT NOT NULL,
+    type ENUM('ORDER', 'PROMOTION', 'SYSTEM', 'PAYMENT') NOT NULL,
+    data JSON, -- Lưu thêm data như order_id, product_id...
+    is_read BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    read_at TIMESTAMP NULL,
+    INDEX idx_user_id (user_id),
+    INDEX idx_user_read (user_id, is_read),
+    INDEX idx_created_at (created_at)
+);
+
+-- Bảng notification templates (optional)
+CREATE TABLE notification_templates (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    type VARCHAR(50) NOT NULL UNIQUE,
+    title_template VARCHAR(255) NOT NULL,
+    body_template TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Insert templates
+INSERT INTO notification_templates VALUES
+(1, 'ORDER_CREATED', 'Đơn hàng mới #{orderId}', 'Bạn có đơn hàng mới với giá trị {totalAmount}đ', NOW()),
+(2, 'ORDER_SHIPPED', 'Đơn hàng #{orderId} đã giao', 'Đơn hàng của bạn đang trên đường giao đến', NOW()),
+(3, 'PAYMENT_SUCCESS', 'Thanh toán thành công', 'Bạn đã thanh toán thành công {amount}đ', NOW());

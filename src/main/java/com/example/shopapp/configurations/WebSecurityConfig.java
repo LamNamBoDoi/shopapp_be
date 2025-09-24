@@ -57,6 +57,8 @@ public class WebSecurityConfig {
                                     String.format("%s/users/login", apiPrefix),
                                     String.format("%s/users/refresh-token", apiPrefix)
                             ).permitAll()
+                            .requestMatchers(String.format("%s/notifications/**", apiPrefix)).permitAll()
+                            .requestMatchers("/ws/**").permitAll()
                             .requestMatchers(GET,
                                     String.format("%s/categories", apiPrefix)).permitAll()
                             .requestMatchers(POST,
@@ -132,7 +134,7 @@ public class WebSecurityConfig {
                                     String.format("%s/order_details/**", apiPrefix)).hasRole(Role.ADMIN)
                             .requestMatchers(DELETE,
                                     String.format("%s/order_details/**", apiPrefix)).hasRole(Role.ADMIN)
-
+                            .requestMatchers(String.format("%s/chats/**", apiPrefix)).hasAnyRole(Role.USER, Role.ADMIN)
                             .anyRequest().authenticated();
                 })
                 .csrf(AbstractHttpConfigurer::disable);

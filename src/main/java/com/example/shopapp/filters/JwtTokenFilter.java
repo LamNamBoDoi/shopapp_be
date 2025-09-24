@@ -38,22 +38,22 @@ public class JwtTokenFilter extends OncePerRequestFilter {
                                     @NonNull HttpServletResponse response,
                                     @NonNull FilterChain filterChain)
             throws IOException, ServletException {
-            if(isBypassToken(request)){
-                filterChain.doFilter(request, response);
-                return;
-            }
-        try{
+        if (isBypassToken(request)) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+        try {
             final String authHeader = request.getHeader("Authorization");
-            if(authHeader == null || !authHeader.startsWith("Bearer ")){
+            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
                 response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Unauthorized");
                 return;
             }
             final String token = authHeader.substring(7);
             final String phoneNumber = jwtTokenUtils.extractPhonenumber(token);
-            if(phoneNumber != null
-                    && SecurityContextHolder.getContext().getAuthentication() == null){
-                User userDetails = (User)userDetailsService.loadUserByUsername(phoneNumber);
-                if(jwtTokenUtils.validateToken(token, userDetails)){
+            if (phoneNumber != null
+                    && SecurityContextHolder.getContext().getAuthentication() == null) {
+                User userDetails = (User) userDetailsService.loadUserByUsername(phoneNumber);
+                if (jwtTokenUtils.validateToken(token, userDetails)) {
                     Claims claims = jwtTokenUtils.extractAllClaims(token);
                     List<String> roles = claims.get("roles", List.class);
 
@@ -73,7 +73,7 @@ public class JwtTokenFilter extends OncePerRequestFilter {
                 }
             }
             filterChain.doFilter(request, response);
-        }catch (Exception e){
+        } catch (Exception e) {
             response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Unauthorized");
         }
 
@@ -92,8 +92,12 @@ public class JwtTokenFilter extends OncePerRequestFilter {
                 Pair.of(String.format("%s/reviews/**", apiPrefix), "GET"),
                 Pair.of(String.format("%s/users/register", apiPrefix), "POST"),
                 Pair.of(String.format("%s/users/login", apiPrefix), "POST"),
-                Pair.of(String.format("%s/users/refresh-token", apiPrefix), "POST")
-        );
+                Pair.of(String.format("%s/users/refresh-token", apiPrefix), "POST"),
+                Pair.of("/ws", "GET"),
+                Pair.of(String.format("%s/notifications/**", apiPrefix), "POST"),
+                Pair.of(String.format("%s/notifications/**", apiPrefix), "GET")
+
+                );
 
         String requestPath = request.getServletPath();
         String requestMethod = request.getMethod();

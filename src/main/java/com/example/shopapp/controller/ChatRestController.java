@@ -1,7 +1,10 @@
 package com.example.shopapp.controller;
 
+import com.example.shopapp.dtos.ChatRoomDTO;
 import com.example.shopapp.models.ChatMessage;
 import com.example.shopapp.models.ChatRoom;
+import com.example.shopapp.response.ChatMessageResponse;
+import com.example.shopapp.response.ChatRoomResponse;
 import com.example.shopapp.services.ChatMessage.IChatMessageService;
 import com.example.shopapp.services.ChatRoom.IChatRoomService;
 import lombok.RequiredArgsConstructor;
@@ -15,18 +18,18 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/chat")
+@RequestMapping("${api.prefix}/chats")
 @RequiredArgsConstructor
 public class ChatRestController {
     private final IChatMessageService chatMessageService;
     private final IChatRoomService chatRoomService;
     @GetMapping("/history/{chatRoomId}")
-    public ResponseEntity<List<ChatMessage>> getHistory(@PathVariable Long chatRoomId){
+    public ResponseEntity<List<ChatMessageResponse>> getHistory(@PathVariable Long chatRoomId){
         return ResponseEntity.ok(chatMessageService.getMessagesByRoom(chatRoomId));
     }
 
     @GetMapping("/history/{chatRoomId}/paginated")
-    public ResponseEntity<Page<ChatMessage>> getHistoryPaginated(
+    public ResponseEntity<Page<ChatMessageResponse>> getHistoryPaginated(
             @PathVariable Long chatRoomId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size
@@ -36,20 +39,18 @@ public class ChatRestController {
     }
 
     @PostMapping("/room")
-    public ResponseEntity<ChatRoom> createOrGetRoom(@RequestBody Map<String, Long> request) {
-        Long customerId = request.get("customerId");
-        Long adminId = request.get("adminId");
-        ChatRoom room = chatRoomService.findOrCreateRoom(customerId, adminId);
+    public ResponseEntity<ChatRoomResponse> createOrGetRoom(@RequestBody ChatRoomDTO chatRoomDTO) {
+        ChatRoomResponse room = chatRoomService.findOrCreateRoom(chatRoomDTO);
         return ResponseEntity.ok(room);
     }
 
-    @GetMapping("/rooms/admin/{adminId}")
-    public ResponseEntity<List<ChatRoom>> getAdminRooms(@PathVariable Long adminId) {
+    @GetMapping("/room/admin/{adminId}")
+    public ResponseEntity<List<ChatRoomResponse>> getAdminRooms(@PathVariable Long adminId) {
         return ResponseEntity.ok(chatRoomService.getActiveRoomsByAdmin(adminId));
     }
 
-    @GetMapping("/rooms/customer/{customerId}")
-    public ResponseEntity<List<ChatRoom>> getCustomerRooms(@PathVariable Long customerId) {
+    @GetMapping("/room/customer/{customerId}")
+    public ResponseEntity<List<ChatRoomResponse>> getCustomerRooms(@PathVariable Long customerId) {
         return ResponseEntity.ok(chatRoomService.getActiveRoomsByCustomer(customerId));
     }
 
@@ -64,9 +65,19 @@ public class ChatRestController {
         return ResponseEntity.ok(chatMessageService.getUnreadCount(userId));
     }
 
+    @PutMapping("/messages/room/{roomId}/read/{userId}")
+    public ResponseEntity<Integer> markAllAsRead(@PathVariable Long roomId, @PathVariable Long userId) {
+        return ResponseEntity.ok(
+                chatMessageService.markAllAsRead(roomId, userId)
+
+        );
+    }
+
     @DeleteMapping("/room/{roomId}")
     public ResponseEntity<Void> closeRoom(@PathVariable Long roomId) {
         chatRoomService.markAsInactive(roomId);
         return ResponseEntity.ok().build();
     }
+
+
 }

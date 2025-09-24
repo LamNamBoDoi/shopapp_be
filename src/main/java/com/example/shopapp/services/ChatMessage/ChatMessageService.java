@@ -1,9 +1,14 @@
-package com.example.shopapp.services;
+package com.example.shopapp.services.ChatMessage;
 
+import com.example.shopapp.dtos.ChatMessageDTO;
 import com.example.shopapp.models.ChatMessage;
+import com.example.shopapp.models.ChatRoom;
 import com.example.shopapp.repositories.ChatMessageRepository;
+import com.example.shopapp.repositories.ChatRoomRepository;
+import com.example.shopapp.response.ChatMessageResponse;
 import com.example.shopapp.services.ChatMessage.IChatMessageService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataAccessException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -14,19 +19,41 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ChatMessageService implements IChatMessageService {
     private final ChatMessageRepository messageRepository;
+    private final ChatRoomRepository chatRoomRepository;
+    @Override
+    public ChatMessageResponse saveMessage(ChatMessageDTO chatMessageDTO) {
+        ChatRoom chatRoom = chatRoomRepository.findById(chatMessageDTO.getChatRoomId()).orElseThrow(() -> new DataAccessException("Chat room not found") {
+        });
 
-    public ChatMessage saveMessage(ChatMessage message) {
-        return messageRepository.save(message);
+        ChatMessage message = ChatMessage.builder()
+                .chatRoom(chatRoom)
+                .senderId(chatMessageDTO.getSenderId())
+                .receiverId(chatMessageDTO.getReceiverId())
+                .senderType(chatMessageDTO.getSenderType())
+                .message(chatMessageDTO.getMessage())
+                .messageType(chatMessageDTO.getMessageType())
+                .read(false) // mới gửi thì chưa đọc
+                .build();
+
+        ChatMessage saved = messageRepository.save(message);
+        return ChatMessageResponse.fromChatMessage(saved); // cần có hàm này
     }
 
-    public List<ChatMessage> getMessagesByRoom(Long chatRoomId) {
-        return messageRepository.findByChatRoomIdOrderByTimestampAsc(chatRoomId);
+
+    @Override
+    public List<ChatMessageResponse> getMessagesByRoom(Long chatRoomId) {
+        List<ChatMessage> messages = messageRepository.findByChatRoomIdOrderByCreatedAtAsc(chatRoomId);
+        return messages.stream()
+                .map(ChatMessageResponse::fromChatMessage)
+                .toList();
     }
 
     @Override
-    public Page<ChatMessage> getMessagesByRoomPaginated(Long chatRoomId, Pageable pageable) {
-        return messageRepository.findByChatRoomIdOrderByTimestampDesc(chatRoomId, pageable);
+    public Page<ChatMessageResponse> getMessagesByRoomPaginated(Long chatRoomId, Pageable pageable) {
+        Page<ChatMessage> page = messageRepository.findByChatRoomIdOrderByCreatedAtDesc(chatRoomId, pageable);
+        return page.map(ChatMessageResponse::fromChatMessage);
     }
+
 
     @Override
     public void markAsRead(Long messageId) {
@@ -42,9 +69,12 @@ public class ChatMessageService implements IChatMessageService {
     }
 
     @Override
-    public void markAllAsRead(Long roomId, Long userId) {
+    public int markAllAsRead(Long roomId, Long userId) {
         List<ChatMessage> unreadMessages = messageRepository.findByChatRoomIdAndReceiverIdAndReadFalse(roomId, userId);
         unreadMessages.forEach(message -> message.setRead(true));
         messageRepository.saveAll(unreadMessages);
+        return unreadMessages.size();
     }
+
+
 }

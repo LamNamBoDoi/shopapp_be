@@ -1,7 +1,9 @@
 package com.example.shopapp.controller;
 
+import com.example.shopapp.dtos.ChatMessageDTO;
 import com.example.shopapp.models.ChatMessage;
 import com.example.shopapp.models.ChatRoom;
+import com.example.shopapp.response.ChatMessageResponse;
 import com.example.shopapp.services.ChatMessage.IChatMessageService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
@@ -21,19 +23,14 @@ public class ChatWebSocketController {
 
     // bắt các message gửi đến theo cấu hình
     @MessageMapping("/chat.send/{roomId}")
-    public void sendMessage(@DestinationVariable Long roomId, @Payload ChatMessage message){
-        message.setRead(false);
-        ChatRoom chatRoom = new ChatRoom();
-        chatRoom.setId(roomId);
-        message.setChatRoom(chatRoom);
-
-        ChatMessage savedMessage = chatMessageService.saveMessage(message);
+    public void sendMessage(@DestinationVariable Long roomId, @Payload ChatMessageDTO chatMessageDTO){
+        ChatMessageResponse savedMessage = chatMessageService.saveMessage(chatMessageDTO);
 
         // Gửi tin nhắn đến room cụ thể
         messagingTemplate.convertAndSend("/topic/room/" + roomId, savedMessage);
 
         // Thông báo cho admin/customer về tin nhắn mới
-        messagingTemplate.convertAndSend("/topic/notifications/" + message.getReceiverId(),
+        messagingTemplate.convertAndSend("/topic/notifications/" + chatMessageDTO.getReceiverId(),
                 Map.of("type", "new_message", "roomId", roomId, "message", savedMessage));
     }
 

@@ -1,11 +1,15 @@
 package com.example.shopapp.models;
 
 import jakarta.persistence.*;
-import lombok.Data;
+import lombok.*;
 
-import java.time.LocalDateTime;
 @Entity
-@Data
+@Setter
+@Getter
+@Builder
+@AllArgsConstructor
+@NoArgsConstructor
+@Table(name = "chat_messages")
 public class ChatMessage extends BaseEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -15,15 +19,22 @@ public class ChatMessage extends BaseEntity {
     @JoinColumn(name = "chat_room_id")
     private ChatRoom chatRoom;
 
+    @Column(name = "sender_id")
     private Long senderId;
+
+    @Column(name = "receiver_id")
     private Long receiverId;
 
+    @Column(name = "sender_type")
     private String senderType; // "CUSTOMER" | "ADMIN"
+
+    @Column(name = "message")
     private String message; // nội dung hoặc đường dẫn ảnh/video
+
+    @Column(name = "message_type")
     private String messageType; // "TEXT", "IMAGE", "VIDEO"
-    @Column(nullable = false)
-    private LocalDateTime timestamp;
+
     @Column(name = "is_read")
-    private boolean read;
+    private Boolean read;
 }
 

@@ -2,7 +2,6 @@ package com.example.shopapp.response;
 
 import com.example.shopapp.models.Order;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import jakarta.persistence.Column;
 import lombok.*;
 
 import java.time.LocalDate;
@@ -20,46 +19,46 @@ public class OrderResponse extends BaseResponse {
     @JsonProperty("user_id")
     private Long userId;
 
-    @Column(name = "fullname")
+    @JsonProperty("fullname")
     private String fullName;
 
-    @Column(name = "email")
+    @JsonProperty("email")
     private String email;
 
-    @Column(name = "phone_number")
+    @JsonProperty("phone_number")
     private String phoneNumber;
 
-    @Column(name = "address")
+    @JsonProperty("address")
     private String address;
 
-    @Column(name = "note")
+    @JsonProperty("note")
     private String note;
 
-    @Column(name = "order_date")
+    @JsonProperty("order_date")
     private Date orderDate;
 
-    @Column(name = "status")
+    @JsonProperty("status")
     private String status;
 
-    @Column(name = "total_money")
+    @JsonProperty("total_money")
     private Float totalMoney;
 
-    @Column(name = "shipping_method")
+    @JsonProperty("shipping_method")
     private String shippingMethod;
 
-    @Column(name = "shipping_address")
+    @JsonProperty("shipping_address")
     private String shippingAddress;
 
-    @Column(name = "shipping_date")
+    @JsonProperty("shipping_date")
     private LocalDate shippingDate;
 
-    @Column(name = "tracking_number")
+    @JsonProperty("tracking_number")
     private String trackingNumber;
 
-    @Column(name = "payment_method")
+    @JsonProperty("payment_method")
     private String paymentMethod;
 
-    @Column(name = "active")
+    @JsonProperty("active")
     private Boolean active;
 
     @JsonProperty("order_details")
@@ -68,7 +67,7 @@ public class OrderResponse extends BaseResponse {
     public static OrderResponse fromOrder(Order order) {
         return OrderResponse.builder()
                 .id(order.getId())
-                .userId(order.getId())
+                .userId(order.getUser().getId()) // ✅ fix nếu trước đó bị gán sai
                 .fullName(order.getFullName())
                 .phoneNumber(order.getPhoneNumber())
                 .email(order.getEmail())
@@ -92,5 +91,4 @@ public class OrderResponse extends BaseResponse {
     public static List<OrderResponse> fromOrdersList(List<Order> ordersList) {
         return ordersList.stream().map(OrderResponse::fromOrder).toList();
     }
-
 }
