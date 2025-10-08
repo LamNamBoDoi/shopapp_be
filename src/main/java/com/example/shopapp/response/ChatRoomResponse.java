@@ -2,6 +2,7 @@ package com.example.shopapp.response;
 
 import com.example.shopapp.models.ChatRoom;
 import com.example.shopapp.models.User;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -26,6 +27,7 @@ public class ChatRoomResponse {
     private Boolean active;
 
     @JsonProperty("created_at")
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime createdAt;
     public static ChatRoomResponse fromChatRoom(ChatRoom chatRoom){
         return ChatRoomResponse.builder()

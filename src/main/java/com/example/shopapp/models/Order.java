@@ -1,12 +1,12 @@
 package com.example.shopapp.models;
 
+import com.example.shopapp.enums.OrderStatus;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.Date;
 import java.util.List;
 
 @Entity
@@ -16,7 +16,7 @@ import java.util.List;
 @AllArgsConstructor
 @NoArgsConstructor
 @Table(name = "orders")
-public class Order {
+public class Order extends BaseEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -29,45 +29,53 @@ public class Order {
     private String fullName;
 
     @Column(name = "email", length = 100)
-    private  String email;
+    private String email;
 
-    @Column(name = "phone_number", nullable = false, length = 100)
+    @Column(name = "phone_number", nullable = false, length = 20) // sửa từ 100 -> 20
     private String phoneNumber;
 
-    @Column(name = "address", length = 100)
+    @Column(name = "address", nullable = false, length = 200) // sửa từ 100 -> 200
     private String address;
 
     @Column(name = "note", length = 100)
     private String note;
 
     @Column(name = "order_date")
-    private Date orderDate;
+    private LocalDateTime orderDate;
 
-    @Column(name = "status")
-    private String status;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", length = 20)
+    private OrderStatus status;
 
     @Column(name = "total_money")
     private Float totalMoney;
 
-    @Column(name = "shipping_method")
+    @Column(name = "shipping_method", length = 100)
     private String shippingMethod;
 
-    @Column(name = "shipping_address")
+    @Column(name = "shipping_address", length = 200)
     private String shippingAddress;
 
-    @Column(name = "tracking_number")
+    @Column(name = "tracking_number", length = 100)
     private String trackingNumber;
 
-    @Column(name = "payment_method")
+    @Column(name = "payment_method", length = 100)
     private String paymentMethod;
 
     @Column(name = "shipping_date")
-    private LocalDate shippingDate;// khi người dùng thanh toàn mới cập nhật
+    private LocalDate shippingDate;
 
     @Column(name = "active")
-    private boolean active;// thuộc về admin
+    private Boolean active;
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @JsonManagedReference
     private List<OrderDetail> orderDetails;
+
+    @OneToOne(mappedBy = "order", cascade = CascadeType.ALL)
+    private Payment payment;
+
+    @ManyToOne
+    @JoinColumn(name = "coupon_id")
+    private Coupon coupon;
 }

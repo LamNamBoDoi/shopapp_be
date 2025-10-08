@@ -37,9 +37,6 @@ public class NotificationService {
     private final FirebaseMessaging firebaseMessaging;
     private final ObjectMapper objectMapper;
 
-    /**
-     * Gửi thông báo (lưu DB + gửi FCM)
-     */
     public void sendNotification(NotificationDTO dto) {
         try {
             // 1. Lưu vào database
@@ -56,9 +53,6 @@ public class NotificationService {
         }
     }
 
-    /**
-     * Lưu notification vào DB
-     */
     private Notification saveNotificationToDB(NotificationDTO dto) {
         try {
             String dataJson = dto.getData() != null ?
@@ -79,9 +73,6 @@ public class NotificationService {
         }
     }
 
-    /**
-     * Gửi FCM cho tất cả devices của user
-     */
     private void sendFCMToUser(Long userId, String title, String body, Map<String, Object> data) {
         List<UserDevice> devices = userDeviceRepository.findByUserIdAndIsActiveTrue(userId);
 

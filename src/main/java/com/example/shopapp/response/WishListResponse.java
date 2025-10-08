@@ -9,7 +9,9 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Data
 @AllArgsConstructor
@@ -33,8 +35,13 @@ public class WishListResponse {
     }
 
     public static List<WishListResponse> fromWishlistList(List<Wishlist> wishlists) {
+        if (wishlists == null || wishlists.isEmpty()) {
+            return new ArrayList<>();
+        }
+
         return wishlists.stream()
                 .map(WishListResponse::fromWishlist)
-                .toList();
+                .collect(Collectors.toList());
     }
+
 }

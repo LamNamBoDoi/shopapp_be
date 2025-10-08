@@ -5,7 +5,9 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Getter
 @Setter
@@ -35,8 +37,13 @@ public class CommentResponse {
     }
 
     public static List<CommentResponse> fromCommentList(List<Comment> comments) {
+        if (comments == null || comments.isEmpty()) {
+            return new ArrayList<>();
+        }
+
         return comments.stream()
                 .map(CommentResponse::fromComment)
-                .toList();
+                .collect(Collectors.toList());
     }
+
 }

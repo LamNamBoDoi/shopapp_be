@@ -1,8 +1,10 @@
 package com.example.shopapp.dtos;
 
+import com.example.shopapp.enums.OrderStatus;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -50,8 +52,12 @@ public class OrderDTO {
     private LocalDate shippingDate;
 
     @JsonProperty("payment_method")
+    @NotBlank(message = "Payment method is required")
+    @Pattern(regexp = "COD|VNPAY|MOMO|ZALOPAY", message = "Payment method must be COD, VNPAY, MOMO, or ZALOPAY")
     private String paymentMethod;
 
     @JsonProperty("cart_items")
     private List<CartItemDTO> cartItems;
+
+    private OrderStatus status;
 }

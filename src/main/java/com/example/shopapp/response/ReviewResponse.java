@@ -2,6 +2,7 @@ package com.example.shopapp.response;
 
 import com.example.shopapp.models.Review;
 import com.example.shopapp.models.Wishlist;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -9,6 +10,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 @Data
@@ -38,6 +40,7 @@ public class ReviewResponse {
     private String status;
 
     @JsonProperty("created_at")
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime createdAt;
 
     public static ReviewResponse fromReview(Review review) {
@@ -54,8 +57,13 @@ public class ReviewResponse {
     }
 
     public static List<ReviewResponse> fromReviewList(List<Review> reviews) {
+        if (reviews == null || reviews.isEmpty()) {
+            return new ArrayList<>();
+        }
+
         return reviews.stream()
                 .map(ReviewResponse::fromReview)
                 .toList();
     }
+
 }

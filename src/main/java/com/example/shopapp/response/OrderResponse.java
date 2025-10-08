@@ -1,10 +1,13 @@
 package com.example.shopapp.response;
 
+import com.example.shopapp.enums.OrderStatus;
 import com.example.shopapp.models.Order;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.*;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.List;
 
@@ -35,10 +38,11 @@ public class OrderResponse extends BaseResponse {
     private String note;
 
     @JsonProperty("order_date")
-    private Date orderDate;
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
+    private LocalDateTime orderDate;
 
     @JsonProperty("status")
-    private String status;
+    private OrderStatus status;
 
     @JsonProperty("total_money")
     private Float totalMoney;
@@ -50,6 +54,7 @@ public class OrderResponse extends BaseResponse {
     private String shippingAddress;
 
     @JsonProperty("shipping_date")
+    @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate shippingDate;
 
     @JsonProperty("tracking_number")
@@ -67,7 +72,7 @@ public class OrderResponse extends BaseResponse {
     public static OrderResponse fromOrder(Order order) {
         return OrderResponse.builder()
                 .id(order.getId())
-                .userId(order.getUser().getId()) // ✅ fix nếu trước đó bị gán sai
+                .userId(order.getUser().getId())
                 .fullName(order.getFullName())
                 .phoneNumber(order.getPhoneNumber())
                 .email(order.getEmail())
@@ -81,7 +86,7 @@ public class OrderResponse extends BaseResponse {
                 .shippingDate(order.getShippingDate())
                 .trackingNumber(order.getTrackingNumber())
                 .paymentMethod(order.getPaymentMethod())
-                .active(order.isActive())
+                .active(order.getActive())
                 .orderDetails(OrderDetailResponse.fromOrderDetailList(
                         order.getOrderDetails()
                 ))

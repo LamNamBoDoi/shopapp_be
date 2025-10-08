@@ -2,11 +2,13 @@ package com.example.shopapp.response.user;
 
 import com.example.shopapp.models.Role;
 import com.example.shopapp.models.User;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.Column;
 import lombok.*;
 
+import java.time.LocalDate;
 import java.util.Date;
 
 @Getter
@@ -32,7 +34,8 @@ public class UserRegisterResponse {
     private boolean active;
 
     @JsonProperty("date_of_birth")
-    private Date dateOfBirth;
+    @JsonFormat(pattern = "yyyy-MM-dd")
+    private LocalDate dateOfBirth;
 
     @JsonProperty("facebook_account_id")
     private int facebookAccountId;

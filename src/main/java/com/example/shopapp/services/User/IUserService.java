@@ -10,6 +10,8 @@ import com.example.shopapp.response.LoginResponse;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
+import java.util.List;
+
 public interface IUserService {
     User createUser(UserDTO userDTO) throws Exception;
     String login(String phoneNumber, String password) throws DataNotFoundException;
@@ -22,4 +24,6 @@ public interface IUserService {
     void resetPassword(Long userId, String newPassword) throws Exception;
 
     void blockOrEnable(Long userId, Boolean active) throws DataNotFoundException;
+
+    List<User> findAllUsersNoPage();
 }

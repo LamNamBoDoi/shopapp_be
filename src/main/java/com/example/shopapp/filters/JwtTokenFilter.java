@@ -38,6 +38,7 @@ public class JwtTokenFilter extends OncePerRequestFilter {
                                     @NonNull HttpServletResponse response,
                                     @NonNull FilterChain filterChain)
             throws IOException, ServletException {
+
         if (isBypassToken(request)) {
             filterChain.doFilter(request, response);
             return;
@@ -81,21 +82,40 @@ public class JwtTokenFilter extends OncePerRequestFilter {
 
     private boolean isBypassToken(@NonNull HttpServletRequest request) {
         final List<Pair<String, String>> bypassTokens = Arrays.asList(
+                // Public API
                 Pair.of(String.format("%s/images/**", apiPrefix), "GET"),
-                Pair.of(String.format("%s/products", apiPrefix), "GET"),
-                Pair.of(String.format("%s/products/**", apiPrefix), "GET"),
-                Pair.of(String.format("%s/products/by-ids**", apiPrefix), "GET"),
-                Pair.of(String.format("%s/orders/**", apiPrefix), "GET"),
+                Pair.of(String.format("%s/products**", apiPrefix), "GET"),
+                Pair.of(String.format("%s/products/images/**", apiPrefix), "GET"),
+                Pair.of(String.format("%s/products/details**", apiPrefix), "GET"),
                 Pair.of(String.format("%s/comments**", apiPrefix), "GET"),
                 Pair.of(String.format("%s/categories**", apiPrefix), "GET"),
-                Pair.of(String.format("%s/wishlists/**", apiPrefix), "GET"),
+                Pair.of(String.format("%s/categories/**", apiPrefix), "GET"),
                 Pair.of(String.format("%s/reviews/**", apiPrefix), "GET"),
                 Pair.of(String.format("%s/users/register", apiPrefix), "POST"),
                 Pair.of(String.format("%s/users/login", apiPrefix), "POST"),
                 Pair.of(String.format("%s/users/refresh-token", apiPrefix), "POST"),
-                Pair.of("/ws", "GET"),
-                Pair.of(String.format("%s/notifications/**", apiPrefix), "POST"),
-                Pair.of(String.format("%s/notifications/**", apiPrefix), "GET")
+                Pair.of(String.format("%s/healthcheck/health", apiPrefix), "GET"),
+                Pair.of(String.format("%s/actuator/**", apiPrefix), "GET"),
+                Pair.of(String.format("%s/payment-result", apiPrefix), "GET"),
+
+                Pair.of("/ws/**", "GET"),
+                Pair.of("/ws-sockjs/**", "GET"),
+
+                // Swagger & Docs
+                Pair.of("/swagger-ui/**", "GET"),
+                Pair.of("/v3/api-docs/**", "GET"),
+                Pair.of("/swagger-resources/**", "GET"),
+                Pair.of("/webjars/**", "GET"),
+                Pair.of("/swagger-ui.html", "GET"),
+                Pair.of("/api-docs/**", "GET"),
+                Pair.of("/error", "GET"),
+
+                // ===== Payment callbacks (whitelist) =====
+                Pair.of(String.format("%s/payments/vnpay-return", apiPrefix), "GET"),
+                Pair.of(String.format("%s/payments/vnpay-notify", apiPrefix), "GET"),
+                Pair.of(String.format("%s/payments/momo-return", apiPrefix), "GET"),
+                Pair.of(String.format("%s/payments/momo-notify", apiPrefix), "POST"),
+                Pair.of(String.format("%s/payments/zalopay/callback", apiPrefix), "POST")
 
                 );
 
@@ -103,26 +123,17 @@ public class JwtTokenFilter extends OncePerRequestFilter {
         String requestMethod = request.getMethod();
         AntPathMatcher matcher = new AntPathMatcher();
 
-        // Bỏ qua các tài nguyên swagger, docs, lỗi
-        if (requestPath.startsWith("/swagger-ui") ||
-                requestPath.startsWith("/v3/api-docs") ||
-                requestPath.startsWith("/swagger-resources") ||
-                requestPath.startsWith("/webjars") ||
-                requestPath.equals("/swagger-ui.html") ||
-                requestPath.equals("/error")) {
-            return true;
-        }
-
         for (Pair<String, String> bypassToken : bypassTokens) {
             String pathPattern = bypassToken.getFirst();
             String method = bypassToken.getSecond();
 
             if (matcher.match(pathPattern, requestPath) &&
                     requestMethod.equalsIgnoreCase(method)) {
-                System.out.println("true");
+                System.out.printf("Bypass: %s %s%n", requestMethod, requestPath);
                 return true;
             }
         }
         return false;
     }
+
 }

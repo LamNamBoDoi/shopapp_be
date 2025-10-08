@@ -2,6 +2,7 @@ package com.example.shopapp.response;
 
 import com.example.shopapp.models.ChatMessage;
 import com.example.shopapp.models.ChatRoom;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.Column;
 import lombok.*;
@@ -38,6 +39,7 @@ public class ChatMessageResponse {
     private boolean read;
 
     @JsonProperty("created_at")
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime createdAt;
 
     public static ChatMessageResponse fromChatMessage(ChatMessage chatMessage){

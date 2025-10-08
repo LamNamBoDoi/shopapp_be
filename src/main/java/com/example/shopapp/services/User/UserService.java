@@ -210,5 +210,10 @@ public class UserService extends TranslateMessages implements IUserService {
         userRepository.save(user);
     }
 
+    @Override
+    public List<User> findAllUsersNoPage() {
+        return userRepository.findAll();
+    }
+
 
 }

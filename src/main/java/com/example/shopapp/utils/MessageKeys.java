@@ -7,7 +7,6 @@ public class MessageKeys {
     public static final String PHONE_NUMBER_EXISTED = "user.login.phone_number_existed";
     public static final String PHONE_NUMBER_AND_PASSWORD_FAILED = "user.login.phone_number_and_password_failed";
     public static final String CAN_NOT_CREATE_ACCOUNT_ROLE_ADMIN = "user.login.can_not_account_role_admin";
-
     // register
     public static final String PASSWORD_NOT_MATCH = "user.register.password_not_match";
     public static final String REGISTER_SUCCESS = "user.register.register_success";
@@ -26,6 +25,7 @@ public class MessageKeys {
     public static final String REVIEW_SUCCESS = "review.create.create_success";
 
     // validation
+    public static final String ACCESS_DENIED= "access_denied";
     public static final String ERROR_MESSAGE = "message.error";
     public static final String PHONE_NUMBER_REQUIRED = "phone_number.required";
     public static final String PASSWORD_REQUIRED = "password.required";
@@ -70,9 +70,13 @@ public class MessageKeys {
 
     public static final String CREATE_ORDER_SUCCESS = "order.create.successfully";
     public static final String CREATE_ORDER_FAILED = "order.create.failed";
+    public static final String UPDATE_ORDER_SUCCESS = "order.update.successfully";
+    public static final String UPDATE_PRODUCT_SUCCESS = "product.update.successfully";
+    public static final String UPDATE_ORDER_DETAILS_SUCCESS = "order_details.update.successfully";
     public static final String CREATE_ORDER_DETAILS_FAILED = "order_details.create.failed";
     public static final String CREATE_ORDER_DETAILS_SUCCESS = "order_details.create.success";
     public static final String CREATE_PRODUCT_SUCCESS = "product.create.successfully";
+    public static final String CREATE_PRODUCT_IMAGES_SUCCESS = "product_images.create.successfully";
     public static final String CREATE_PRODUCT_FAILED = "product.create.failed";
     public static final String CREATE_CATEGORIES_SUCCESS = "category.create.successfully";
     public static final String CREATE_CATEGORIES_FAILED = "category.create.failed";

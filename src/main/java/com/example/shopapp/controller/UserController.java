@@ -179,9 +179,9 @@ public class UserController extends TranslateMessages {
         return userAgent.toLowerCase().contains("mobile");
     }
 
-    @PostMapping(value = "/details/{userId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PutMapping(value = "/details/{userId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Transactional
-    @PreAuthorize("hasRole('ROLE_USER')")
+    @PreAuthorize("hasRole('ADMIN') OR hasRole('USER')")
     public ResponseEntity<ApiResponse<?>> updateUserDetails(
             @PathVariable Long userId,
             @ModelAttribute @Valid UpdateUserDTO updateUserDTO,
@@ -192,10 +192,21 @@ public class UserController extends TranslateMessages {
                 throw new RuntimeException("Invalid Authorization header");
             }
             String extractedToken = token.substring(7);
-            User user = userService.getUserDetailsFromToken(extractedToken);
-            if (!user.getId().equals(userId)) {
-                return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+            User currentUser = userService.getUserDetailsFromToken(extractedToken);
+
+            // ✅ FIX: Cho phép ADMIN sửa bất kỳ user nào
+            boolean isAdmin = currentUser.getRole().getName().equalsIgnoreCase("ADMIN");
+            boolean isOwner = currentUser.getId().equals(userId);
+
+            if (!isAdmin && !isOwner) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(
+                        ApiResponse.builder()
+                                .message(translate(MessageKeys.ACCESS_DENIED))
+                                .error("Bạn không có quyền cập nhật thông tin người dùng này")
+                                .build()
+                );
             }
+
             User updateUser = userService.updateUser(userId, updateUserDTO);
             return ResponseEntity.ok(ApiResponse.<UserResponse>builder()
                     .success(true)
@@ -205,13 +216,14 @@ public class UserController extends TranslateMessages {
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(
                     ApiResponse.<UserResponse>builder()
-                            .message(translate(MessageKeys.MESSAGE_ERROR_GET)).error(e.getMessage()).build()
+                            .message(translate(MessageKeys.MESSAGE_ERROR_GET))
+                            .error(e.getMessage()).build()
             );
         }
     }
 
     @PutMapping("/block/{userId}/{active}")
-    @PreAuthorize("hasRole('ROLE_ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     @Transactional
     public ResponseEntity<ApiResponse<?>> blockOrEnable(
             @Valid @PathVariable("userId") long id,
@@ -236,20 +248,52 @@ public class UserController extends TranslateMessages {
     }
 
     @GetMapping("")
-    @PreAuthorize("hasRole('ROLE_ADMIN')")
-    public ResponseEntity<?> getAllUsers(
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<?>> getAllUsers(
             @RequestParam(defaultValue = "", name = "keyword", required = false) String keyword,
             @RequestParam(defaultValue = "0", name = "page") int page,
             @RequestParam(defaultValue = "10", name = "limit") int limit
-    ){
-        try{
+    ) {
+        try {
             PageRequest pageRequest = PageRequest.of(page, limit, Sort.by("id").ascending());
             Page<UserResponse> usersPage = userService.findAllUsers(keyword, pageRequest)
                     .map(UserResponse::fromUser);
-            return ResponseEntity.ok(usersPage);
-        }catch (Exception e){
+
+            return ResponseEntity.ok(ApiResponse.<Page<UserResponse>>builder()
+                    .success(true)
+                    .message(translate(MessageKeys.GET_INFORMATION_SUCCESS))
+                    .payload(usersPage)
+                    .build());
+        } catch (Exception e) {
             return ResponseEntity.badRequest().body(ApiResponse.builder()
-                    .error(e.getMessage()).build());
+                    .success(false)
+                    .message(translate(MessageKeys.MESSAGE_ERROR_GET))
+                    .error(e.getMessage())
+                    .build());
         }
     }
+
+    @GetMapping("/all")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<?>> getAllUsersNoPage() {
+        try {
+            List<User> users = userService.findAllUsersNoPage(); // Lấy tất cả user
+            List<UserResponse> userResponses = users.stream()
+                    .map(UserResponse::fromUser)
+                    .toList();
+
+            return ResponseEntity.ok(ApiResponse.builder()
+                    .success(true)
+                    .message(translate(MessageKeys.GET_INFORMATION_SUCCESS))
+                    .payload(userResponses)
+                    .build());
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(ApiResponse.builder()
+                    .success(false)
+                    .message(translate(MessageKeys.MESSAGE_ERROR_GET))
+                    .error(e.getMessage())
+                    .build());
+        }
+    }
+
 }

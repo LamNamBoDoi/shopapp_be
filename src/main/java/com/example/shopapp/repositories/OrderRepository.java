@@ -15,4 +15,5 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     // lẩy ra tất cả các order
     @Query(ConfixSql.Order.GET_ALL_ORDER)
     Page<Order> findByKeyword(String keyword, Pageable pageable);
+    List<Order> findAllByActiveTrue();
 }
