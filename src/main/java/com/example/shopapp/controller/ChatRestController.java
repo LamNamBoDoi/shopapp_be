@@ -1,6 +1,7 @@
 package com.example.shopapp.controller;
 
 import com.example.shopapp.dtos.ChatRoomDTO;
+import com.example.shopapp.exceptions.DataNotFoundException;
 import com.example.shopapp.response.ApiResponse;
 import com.example.shopapp.response.ChatMessageResponse;
 import com.example.shopapp.response.ChatRoomResponse;
@@ -45,7 +46,7 @@ public class ChatRestController {
     }
 
     @PostMapping("/room")
-    public ResponseEntity<ApiResponse<ChatRoomResponse>> createOrGetRoom(@RequestBody ChatRoomDTO chatRoomDTO) {
+    public ResponseEntity<ApiResponse<ChatRoomResponse>> createOrGetRoom(@RequestBody ChatRoomDTO chatRoomDTO) throws DataNotFoundException {
         ChatRoomResponse room = chatRoomService.findOrCreateRoom(chatRoomDTO);
         return ResponseEntity.ok(ApiResponse.<ChatRoomResponse>builder()
                 .success(true)

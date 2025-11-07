@@ -1,6 +1,7 @@
 package com.example.shopapp.services.ChatRoom;
 
 import com.example.shopapp.dtos.ChatRoomDTO;
+import com.example.shopapp.exceptions.DataNotFoundException;
 import com.example.shopapp.models.ChatRoom;
 import com.example.shopapp.models.User;
 import com.example.shopapp.repositories.ChatRoomRepository;
@@ -27,21 +28,35 @@ public class ChatRoomService implements IChatRoomService{
 
 
     @Override
-    public ChatRoomResponse findOrCreateRoom(ChatRoomDTO chatRoomDTO) {
+    public ChatRoomResponse findOrCreateRoom(ChatRoomDTO chatRoomDTO) throws DataNotFoundException {
+        // Validate trước
+        Long customerId = chatRoomDTO.getCustomerId();
+        Long adminId = chatRoomDTO.getAdminId();
+
+        if (!userRepository.existsById(customerId)) {
+            throw new DataNotFoundException("Không tìm thấy customer với id: " + customerId);
+        }
+
+        if (!userRepository.existsById(adminId)) {
+            throw new DataNotFoundException("Không tìm thấy admin với id: " + adminId);
+        }
+
         ChatRoom chatRoom = chatRoomRepository
-                .findByCustomerIdAndAdminId(chatRoomDTO.getCustomerId(), chatRoomDTO.getAdminId())
+                .findByCustomerIdAndAdminId(customerId, adminId)
                 .orElseGet(() -> {
-                    User customer = userRepository.findById(chatRoomDTO.getCustomerId()).orElseThrow();
-                    User admin = userRepository.findById(chatRoomDTO.getAdminId()).orElseThrow();
+                    User customer = userRepository.findById(customerId).get();
+                    User admin = userRepository.findById(adminId).get();
+
                     ChatRoom room = ChatRoom.builder()
                             .customer(customer)
                             .admin(admin)
                             .active(chatRoomDTO.getActive())
                             .build();
-                    return chatRoomRepository.save(room); // return ChatRoom
+
+                    return chatRoomRepository.save(room);
                 });
 
-        return ChatRoomResponse.fromChatRoom(chatRoom); // convert to DTO
+        return ChatRoomResponse.fromChatRoom(chatRoom);
     }
 
 
